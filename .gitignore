@@ -35,3 +35,6 @@ venv/
 /packages/cli/LICENSE
 /packages/cli/README.md
 *.tgz
+
+# private notes / scratch — personal, never committed or shared
+/notes/
