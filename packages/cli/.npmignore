@@ -1,0 +1,34 @@
+# Fallback denylist. While package.json has a "files" allowlist (the current
+# setup), npm honors that and ignores this file — the published tarball is
+# controlled by "files". This .npmignore takes over only if "files" is ever
+# removed, and documents what must never be published.
+#
+# NOTE: module test files (*.test.ts, test_*.py) ARE shipped on purpose —
+# generated projects come with their test runners — so they are NOT listed here.
+
+# CLI source & build config (never ship)
+src/
+scripts/
+tsup.config.ts
+tsconfig.json
+*.tsbuildinfo
+
+# Source maps (also excluded by the "files" glob dist/**/*.js)
+*.map
+
+# OS & editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+
+# Dev artifacts that must never land in the bundled modules/ catalog
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+db.sqlite3
+*.log
+.env
+.env.local

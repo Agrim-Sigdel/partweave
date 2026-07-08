@@ -1,6 +1,6 @@
 {
   "name": "partweave",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A modular full-stack scaffolder — pick the parts you need (Django server, Next.js web, Expo mobile) and generate only that code, wired together.",
   "type": "module",
   "license": "MIT",
@@ -38,7 +38,7 @@
     "create-partweave": "dist/create-bin.js"
   },
   "files": [
-    "dist",
+    "dist/**/*.js",
     "modules",
     "README.md",
     "LICENSE"
