@@ -1,0 +1,22 @@
+{
+  "id": "db-postgres",
+  "title": "PostgreSQL",
+  "description": "Use PostgreSQL instead of the default SQLite.",
+  "kind": "feature",
+  "targets": ["server"],
+  "requiresApps": ["server"],
+  "provides": "database",
+  "default": true,
+  "env": {
+    "DATABASE_URL": "postgres://app:app@localhost:5432/app"
+  },
+  "wiring": {
+    "server": {
+      "deps": ["psycopg[binary]>=3.2"]
+    }
+  },
+  "notes": [
+    "PostgreSQL: set DATABASE_URL in .env (already added to .env.example).",
+    "Need a local database? Include the 'docker' component and run `make db-up`."
+  ]
+}

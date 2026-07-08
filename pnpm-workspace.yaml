@@ -1,0 +1,5 @@
+# Only the generator's own packages are real workspace members.
+# Everything under modules/ is TEMPLATE SOURCE (copied into generated projects),
+# NOT installed here — so it is deliberately excluded from the workspace.
+packages:
+  - "packages/*"

@@ -1,0 +1,21 @@
+{
+  "id": "example",
+  "title": "Example screens",
+  "description": "A demo profile screen that reads the logged-in user from /api/auth/me.",
+  "kind": "feature",
+  "targets": ["web", "mobile"],
+  "requiresApps": ["server"],
+  "requires": ["auth"],
+  "default": true,
+  "wiring": {
+    "web": {
+      "routes": ["{ href: \"/profile\", label: \"My profile\" },"]
+    },
+    "mobile": {
+      "routes": ["{ href: \"/profile\", label: \"My profile\" },"]
+    }
+  },
+  "notes": [
+    "Visit /profile (web) or the Profile screen (mobile) after logging in to see the wiring end-to-end."
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "docker",
+  "title": "Docker & Compose",
+  "description": "A Postgres compose file for local dev and a production Dockerfile for the server.",
+  "kind": "feature",
+  "targets": ["server", "root"],
+  "requiresApps": ["server"],
+  "default": true,
+  "notes": [
+    "Local DB: `make db-up` (docker compose). Server image: `docker build apps/server`."
+  ]
+}

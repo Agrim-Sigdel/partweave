@@ -1,0 +1,11 @@
+{
+  "id": "ci",
+  "title": "CI workflows",
+  "description": "Per-app GitHub Actions with path filters, so each part builds independently.",
+  "kind": "feature",
+  "targets": ["root"],
+  "default": true,
+  "notes": [
+    "CI: see .github/workflows/*.yml — each app's pipeline runs only when its files change."
+  ]
+}

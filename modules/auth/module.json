@@ -1,0 +1,47 @@
+{
+  "id": "auth",
+  "title": "Authentication (JWT)",
+  "description": "Email/password auth with JWT — register, login, refresh, and a current-user endpoint.",
+  "kind": "feature",
+  "targets": ["server", "web", "mobile", "shared"],
+  "requiresApps": ["server"],
+  "requires": ["db-postgres"],
+  "provides": "auth",
+  "default": true,
+  "wiring": {
+    "server": {
+      "installedApps": ["\"accounts\","],
+      "urls": ["path(\"api/auth/\", include(\"accounts.urls\")),"],
+      "settings": ["AUTH_USER_MODEL = \"accounts.User\""],
+      "deps": ["djangorestframework-simplejwt>=5.3"],
+      "anchors": {
+        "drf-auth": ["\"rest_framework_simplejwt.authentication.JWTAuthentication\","]
+      }
+    },
+    "shared": {
+      "anchors": {
+        "exports": ["export * from \"./auth\";"]
+      }
+    },
+    "web": {
+      "providers": ["AuthProvider,"],
+      "routes": ["{ href: \"/login\", label: \"Log in\" },"],
+      "deps": ["@app/shared@workspace:*"],
+      "anchors": {
+        "providers-import": ["import { AuthProvider } from \"@/auth/auth-context\";"]
+      }
+    },
+    "mobile": {
+      "providers": ["AuthProvider,"],
+      "routes": ["{ href: \"/login\", label: \"Log in\" },"],
+      "deps": ["@app/shared@workspace:*", "expo-secure-store@~14.0.0"],
+      "anchors": {
+        "providers-import": ["import { AuthProvider } from \"@/auth/auth-context\";"]
+      }
+    }
+  },
+  "notes": [
+    "Auth endpoints: POST /api/auth/register, POST /api/auth/token, POST /api/auth/token/refresh, GET /api/auth/me",
+    "Web stores tokens in localStorage (swap for httpOnly cookies in production); mobile uses expo-secure-store."
+  ]
+}

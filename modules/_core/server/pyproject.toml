@@ -1,0 +1,38 @@
+[project]
+name = "server"
+version = "0.1.0"
+description = "{{projectName}} API"
+requires-python = ">=3.12"
+dependencies = [
+  "django>=5.0,<6",
+  "djangorestframework>=3.15",
+  "drf-spectacular>=0.27",
+  "django-environ>=0.11",
+  "django-cors-headers>=4.4",
+  "gunicorn>=22.0",
+  # <base:deps>
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+  "pytest-django>=4.8",
+  "ruff>=0.6",
+]
+
+# This is an application, not a distributable package — no build backend needed.
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Migrations are auto-generated; don't lint them.
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "DJ"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py", "*_test.py", "tests.py"]

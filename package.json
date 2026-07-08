@@ -1,0 +1,22 @@
+{
+  "name": "base",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A modular full-stack scaffolding platform — pick the parts you need (Django server, Next.js web, Expo mobile) and generate only that code, wired together.",
+  "type": "module",
+  "packageManager": "pnpm@10.20.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm --filter @base/cli build",
+    "dev": "pnpm --filter @base/cli dev",
+    "cli": "pnpm --filter @base/cli exec base-cli",
+    "create": "pnpm --filter @base/cli exec create-base-app",
+    "test": "pnpm --filter @base/cli test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
