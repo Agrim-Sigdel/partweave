@@ -50,7 +50,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "bundle-modules": "node scripts/bundle-modules.mjs",
-    "prepack": "npm run build && npm run bundle-modules"
+    "prepack": "npm run build && npm run bundle-modules",
+    "postpack": "node scripts/bundle-modules.mjs --clean"
   },
   "dependencies": {
     "@clack/prompts": "^0.9.1",

@@ -10,6 +10,16 @@ import { fileURLToPath } from "node:url";
 
 const pkgDir = dirname(dirname(fileURLToPath(import.meta.url))); // packages/cli
 const root = join(pkgDir, "..", ".."); // repo root
+const copied = ["modules", "README.md", "LICENSE"];
+
+// `--clean` (run from postpack) removes the copied artifacts again. Otherwise a
+// leftover packages/cli/modules/ would shadow the repo-root catalog on the next
+// local CLI run (paths.ts finds it first), silently serving stale templates.
+if (process.argv.includes("--clean")) {
+  for (const name of copied) await rm(join(pkgDir, name), { recursive: true, force: true });
+  console.log("▸ Cleaned bundled publish artifacts");
+  process.exit(0);
+}
 
 // The templates catalog — the CLI is useless without it.
 const modulesSrc = join(root, "modules");
