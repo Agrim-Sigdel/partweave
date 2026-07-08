@@ -2,6 +2,17 @@ import type { AuthTokens, AuthUser, Credentials } from "@app/shared";
 import { API_URL } from "@/lib/config";
 import { tokenStore } from "@/lib/token-store";
 
+/** Error carrying the HTTP status, so callers can react to e.g. a 401. */
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    body: string,
+  ) {
+    super(`${status} ${body}`);
+    this.name = "ApiError";
+  }
+}
+
 // `auth` defaults to true — the stored token is attached. Public endpoints
 // (register/login/refresh) MUST pass `auth: false`: sending a stale/expired
 // token to them makes the server's JWTAuthentication reject the request with a
@@ -17,7 +28,7 @@ async function req<T>(path: string, init: RequestInit & { auth?: boolean } = {})
       ...(headers ?? {}),
     },
   });
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+  if (!res.ok) throw new ApiError(res.status, await res.text());
   return (res.status === 204 ? null : await res.json()) as T;
 }
 

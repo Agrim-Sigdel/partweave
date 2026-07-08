@@ -20,7 +20,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function load() {
     try {
       setUser(await auth.fetchMe());
-    } catch {
+    } catch (err) {
+      // A 401 means the stored token is stale/expired — clear it so it isn't
+      // re-sent on later requests. Other errors (e.g. server down) keep it.
+      if (err instanceof auth.ApiError && err.status === 401) await auth.logout();
       setUser(null);
     } finally {
       setLoading(false);
