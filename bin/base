@@ -3,7 +3,15 @@
 # Usage: ./bin/base create   |   ./bin/base add <component>
 set -euo pipefail
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Resolve symlinks so this works whether run in-repo or via a symlinked launcher
+# (e.g. ~/.local/bin/base -> ~/.base/bin/base).
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  LINK_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$LINK_DIR/$SOURCE"
+done
+DIR="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
 CLI="$DIR/packages/cli/dist/index.js"
 
 if [ ! -f "$CLI" ]; then
