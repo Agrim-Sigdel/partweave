@@ -87,3 +87,27 @@ make gen-api                   # regenerate the typed client (if api-client pres
 
 Copy `.env.example` → `.env` and fill in values first. Each project also records what it
 contains in `.quick-build/manifest.json`, which powers `add` (below).
+
+## Growing a project later
+
+Run `add` from inside a generated project (or pass `--dir`) to add **either an app or a
+component** — the manifest tracks what's installed, so this is safe and idempotent.
+
+```sh
+# add a component (feature) — wires it into your current apps
+quick-build add storage
+quick-build add auth              # pulls in db-postgres automatically
+
+# add a whole app later — e.g. you started backend-only and now want a web frontend
+quick-build add web
+quick-build add mobile
+quick-build add server            # add a backend to a web/mobile-only project
+```
+
+Adding an app is smart: it scaffolds the new app (plus derived packages like `shared` /
+`api-client`) **and brings in the app-side of every component you already have**. So
+`add web` to a `server + auth` project also drops in the login page, auth context, and wires
+the provider — no manual glue. It then updates `pnpm-workspace.yaml`, the `Makefile`, and
+`.env.example` for the new app.
+
+After an `add`, sync deps: `pnpm install` (JS apps) and/or `cd apps/server && uv sync` (server).

@@ -29,10 +29,18 @@ import {
   type WiringForTarget,
 } from "./types.js";
 
+/** Which computed root files to (re)write. */
+export type RootFilesMode = "all" | "structural" | "none";
+
 export interface ComposeOptions {
   selection: Selection;
   registry: Registry;
-  mode: "create" | "add";
+  /** copy the bare _core scaffold for these targets (new apps) */
+  scaffoldTargets: Set<TargetName>;
+  /** copy module files + apply wiring for these targets */
+  wireTargets: Set<TargetName>;
+  /** which computed root files to (re)write: all (create), structural (add-app), none (add-module) */
+  rootFiles: RootFilesMode;
 }
 
 export interface ComposeResult {
@@ -186,7 +194,8 @@ function applyEnv(outDir: string, modules: Module[]): void {
   if (body) writeFileSync(envPath, body);
 }
 
-function writeComputedRootFiles(
+/** Derived, selection-dependent monorepo shell files (safe to regenerate). */
+function writeStructuralRootFiles(
   outDir: string,
   ctx: RenderContext,
   modules: Module[],
@@ -204,33 +213,34 @@ function writeComputedRootFiles(
   const hasDocker = modules.some((m) => m.manifest.id === "docker");
   writeFileEnsured(join(outDir, "Makefile"), buildMakefile(ctx, hasDocker));
   writeFileEnsured(join(outDir, ".env.example"), buildBaseEnv(ctx));
-  writeFileEnsured(join(outDir, "README.md"), buildReadme(ctx, modules));
 }
 
 export function compose(opts: ComposeOptions): ComposeResult {
-  const { selection, registry, mode } = opts;
+  const { selection, registry, scaffoldTargets, wireTargets, rootFiles } = opts;
   const ctx = buildContext(selection);
-  const targets = selectedTargets(ctx);
   const outDir = selection.outDir;
   const modules = selection.modules.map((id) => registry.require(id));
   const written: string[] = [];
 
-  // 1. core scaffolds + computed root files (create only)
-  if (mode === "create") {
-    for (const t of COPY_ORDER) {
-      if (!targets.has(t)) continue;
-      const src = join(registry.modulesDir, "_core", t);
-      if (existsSync(src)) {
-        written.push(...copyTree(src, join(outDir, TARGET_DEST[t]), ctx));
-      }
+  // 1. scaffold bare _core for new targets
+  for (const t of COPY_ORDER) {
+    if (!scaffoldTargets.has(t)) continue;
+    const src = join(registry.modulesDir, "_core", t);
+    if (existsSync(src)) {
+      written.push(...copyTree(src, join(outDir, TARGET_DEST[t]), ctx));
     }
-    writeComputedRootFiles(outDir, ctx, modules);
   }
 
-  // 2. module files
+  // 2. computed root files (env is re-appended by applyEnv below, idempotently)
+  if (rootFiles !== "none") writeStructuralRootFiles(outDir, ctx, modules);
+  if (rootFiles === "all") {
+    writeFileEnsured(join(outDir, "README.md"), buildReadme(ctx, modules));
+  }
+
+  // 3. module files for the targets being wired
   for (const mod of modules) {
     for (const t of mod.manifest.targets) {
-      if (!targets.has(t)) continue;
+      if (!wireTargets.has(t)) continue;
       const src = join(mod.dir, t);
       if (existsSync(src)) {
         written.push(...copyTree(src, join(outDir, TARGET_DEST[t]), ctx));
@@ -238,13 +248,13 @@ export function compose(opts: ComposeOptions): ComposeResult {
     }
   }
 
-  // 3. wiring
-  applyWiring(outDir, targets, modules);
+  // 4. wiring (restricted to the targets being wired)
+  applyWiring(outDir, wireTargets, modules);
 
-  // 4. env
+  // 5. env
   applyEnv(outDir, modules);
 
-  // 4b. CI workflows — the `ci` component is a codegen marker (no template
+  // 6. CI workflows — the `ci` component is a codegen marker (no template
   // files); it emits per-app, path-filtered GitHub Actions for present apps.
   if (selection.modules.includes("ci")) {
     for (const [rel, content] of Object.entries(buildCiWorkflows(ctx))) {
@@ -253,7 +263,7 @@ export function compose(opts: ComposeOptions): ComposeResult {
     }
   }
 
-  // 5. notes
+  // 7. notes
   const notes = modules.flatMap((m) => m.manifest.notes);
   return { written, notes };
 }

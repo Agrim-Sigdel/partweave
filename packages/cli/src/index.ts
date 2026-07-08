@@ -32,11 +32,11 @@ export function buildProgram(): Command {
 
   program
     .command("add")
-    .argument("<modules...>", "component ids to add")
-    .description("Add components to an existing generated project")
+    .argument("<items...>", "apps (server/web/mobile) or component ids to add")
+    .description("Add an app or component to an existing generated project")
     .option("-d, --dir <path>", "project directory (default: cwd)")
-    .action(async (modules: string[], opts: { dir?: string }) => {
-      await runAdd(modules, opts);
+    .action(async (items: string[], opts: { dir?: string }) => {
+      await runAdd(items, opts);
     });
 
   return program;

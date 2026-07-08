@@ -2,7 +2,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { intro, log, note, outro, spinner } from "@clack/prompts";
 import pc from "picocolors";
-import { compose } from "../compose.js";
+import { buildContext, compose, selectedTargets } from "../compose.js";
 import { Registry } from "../registry.js";
 import { writeProjectManifest } from "../projectmanifest.js";
 import { slugify } from "../render.js";
@@ -95,15 +95,19 @@ export async function runCreate(flags: CreateFlags): Promise<void> {
   s.start("Scaffolding");
   let result;
   try {
+    const selection = {
+      projectName: choices.projectName,
+      outDir: choices.outDir,
+      apps: choices.apps,
+      modules: resolved.modules,
+    };
+    const targets = selectedTargets(buildContext(selection));
     result = compose({
-      selection: {
-        projectName: choices.projectName,
-        outDir: choices.outDir,
-        apps: choices.apps,
-        modules: resolved.modules,
-      },
+      selection,
       registry,
-      mode: "create",
+      scaffoldTargets: targets,
+      wireTargets: targets,
+      rootFiles: "all",
     });
   } catch (err) {
     s.stop("Failed");

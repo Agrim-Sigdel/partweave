@@ -5,6 +5,7 @@ import {
   multiselect,
   text,
 } from "@clack/prompts";
+import pc from "picocolors";
 import { resolve } from "node:path";
 import type { Registry } from "./registry.js";
 import { slugify } from "./render.js";
@@ -16,6 +17,9 @@ export interface RawChoices {
   apps: AppName[];
   modules: string[];
 }
+
+/** Controls hint for checkbox (multiselect) prompts. */
+const MULTI_HINT = pc.dim("↑/↓ move · space toggle · a all · enter confirm");
 
 function bail<T>(v: T | symbol): asserts v is T {
   if (isCancel(v)) {
@@ -47,7 +51,7 @@ export async function promptCreate(
   const outDir = resolve(dirRaw.trim());
 
   const appsRaw = await multiselect({
-    message: "Which apps?",
+    message: `Which apps?  ${MULTI_HINT}`,
     options: [
       { value: "server", label: "Server", hint: "Django + DRF" },
       { value: "web", label: "Web", hint: "Next.js" },
@@ -70,7 +74,7 @@ export async function promptCreate(
   let modules: string[] = [];
   if (relevant.length) {
     const modsRaw = await multiselect({
-      message: "Which components? (dependencies are added automatically)",
+      message: `Which components? (deps auto-added)  ${MULTI_HINT}`,
       options: relevant.map((m) => ({
         value: m.manifest.id,
         label: m.manifest.title,
