@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Thin launcher for the base CLI. Builds on first run, then execs the generator.
+# Usage: ./bin/base create   |   ./bin/base add <component>
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CLI="$DIR/packages/cli/dist/index.js"
+
+if [ ! -f "$CLI" ]; then
+  echo "▸ First run — installing dependencies and building the CLI…" >&2
+  if ! command -v pnpm >/dev/null 2>&1; then
+    corepack enable >/dev/null 2>&1 || true
+  fi
+  (cd "$DIR" && pnpm install && pnpm --filter @base/cli build) >&2
+fi
+
+exec node "$CLI" "$@"

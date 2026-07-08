@@ -7,22 +7,35 @@ a Django server, a Next.js web app, an Expo mobile app, and cross-cutting compon
 It's `create-t3-app` (choose your stack) meets `shadcn/ui` (you own the code that's added,
 built on clean, swappable interfaces).
 
+## Install
+
+**Quickest — clone and go** (the launcher builds itself on first run):
 ```sh
-# one-time setup of the generator
-pnpm install
-pnpm --filter @base/cli build
-
-# scaffold a new project (interactive)
-node packages/cli/dist/index.js create
-
-# ...or non-interactively
-node packages/cli/dist/index.js create my-app --dir ~/apps/my-app --server --mobile --with auth,docker
-
-# add a component to an existing generated project later
-cd ~/apps/my-app && node /path/to/base/packages/cli/dist/index.js add storage
+git clone <this-repo-url> ~/.base && cd ~/.base
+./bin/base create                 # interactive
 ```
 
-> Tip: `pnpm --filter @base/cli link --global` exposes `create-base-app` and `base-cli` on your PATH.
+**One-line install** (clones to `~/.base`, builds, adds a `base` command to `~/.local/bin`):
+```sh
+curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/master/scripts/install.sh | bash
+# then, from anywhere:
+base create
+```
+> Set the repo first: edit `OWNER/REPO` in `scripts/install.sh`, or run with
+> `BASE_REPO=<git url> bash`. Requires `git`, Node ≥ 20, and `pnpm` (`corepack enable`).
+
+**Global command via pnpm** (if you prefer `create-base-app` / `base-cli` on your PATH):
+```sh
+cd ~/.base && pnpm install && pnpm --filter @base/cli build
+pnpm --filter @base/cli link --global
+```
+
+### Use it
+```sh
+base create                                                    # interactive picker
+base create my-app --dir ~/apps/my-app --server --mobile --with auth,docker   # scriptable
+cd ~/apps/my-app && base add storage                           # add a component later
+```
 
 ## What you can generate
 
