@@ -21,17 +21,29 @@ node packages/cli/dist/index.js create <name> --dir <path> [app flags] [--with <
 | `--web` / `--no-web` | include/exclude the Next.js web app |
 | `--mobile` / `--no-mobile` | include/exclude the Expo mobile app |
 | `--with <ids>` | comma-separated component ids (`auth,docker,ci,storage,…`) |
+| `--js-pm <pm>` | JS/TS package manager: `pnpm` or `npm` (default: auto-detect) |
+| `--py-pm <pm>` | Python package manager (server): `uv` or `pip` (default: auto-detect) |
 | `-y, --yes` | skip prompts; use flags + defaults |
 | `-f, --force` | write into a non-empty directory |
 
 If you pass any app flag (or `--yes`), it runs non-interactively. Omitting `--with` in that mode
 selects the **default** components that apply to your chosen apps.
 
+### Package managers
+
+You don't need `pnpm` or `uv` — the generator adapts to what you pick (or what's installed). It
+defaults to **pnpm** and **uv** when they're on your `PATH`, otherwise falls back to **npm** and
+**pip** (both ship with Node / Python). Override either explicitly with `--js-pm` / `--py-pm`, or
+choose them in the interactive prompt. The choice is recorded in `.quick-build/manifest.json`, so
+later `add`s stay consistent. Everything the generator emits — the `Makefile`, workspace layout,
+CI, and the server `Dockerfile` — speaks the manager you chose. (The `pip` path uses a `.venv` and
+a small `apps/server/scripts/sync_deps.py` helper as the counterpart to `uv sync`.)
+
 ## Apps
 
 | App | Folder | Stack | Runs with |
 | --- | --- | --- | --- |
-| Server | `apps/server` | Django 5 + DRF, `uv` (Python 3.12), SQLite by default | `make server` |
+| Server | `apps/server` | Django 5 + DRF, `uv` or `pip` (Python 3.12), SQLite by default | `make server` |
 | Web | `apps/web` | Next.js 14 (App Router) + TypeScript + Tailwind | `make web` |
 | Mobile | `apps/mobile` | Expo (React Native) + Expo Router + TypeScript | `make mobile` |
 
@@ -79,7 +91,7 @@ create site --dir ~/apps/site --no-server --web --no-mobile
 Every project has a `Makefile` tailored to what you selected:
 
 ```sh
-make bootstrap                 # install deps (pnpm + uv, as applicable)
+make bootstrap                 # install deps (your chosen JS + Python managers)
 make db-up && make migrate     # Postgres (if docker) + migrations (if server)
 make server / make web / make mobile
 make gen-api                   # regenerate the typed client (if api-client present)
@@ -107,7 +119,8 @@ quick-build add server            # add a backend to a web/mobile-only project
 Adding an app is smart: it scaffolds the new app (plus derived packages like `shared` /
 `api-client`) **and brings in the app-side of every component you already have**. So
 `add web` to a `server + auth` project also drops in the login page, auth context, and wires
-the provider — no manual glue. It then updates `pnpm-workspace.yaml`, the `Makefile`, and
-`.env.example` for the new app.
+the provider — no manual glue. It then updates the workspace (`pnpm-workspace.yaml` or
+`package.json`), the `Makefile`, and `.env.example` for the new app.
 
-After an `add`, sync deps: `pnpm install` (JS apps) and/or `cd apps/server && uv sync` (server).
+After an `add`, `quick-build` prints the exact sync commands for your project's package
+managers (e.g. `pnpm install` / `npm install` for JS apps, and the uv/pip sync for the server).

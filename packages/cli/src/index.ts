@@ -23,6 +23,8 @@ export function buildProgram(): Command {
     .option("--mobile", "include the Expo mobile app")
     .option("--no-mobile", "exclude the mobile app")
     .option("--with <ids>", "comma-separated component ids (e.g. auth,docker,ci)")
+    .option("--js-pm <pm>", "JS package manager: pnpm | npm (default: auto-detect)")
+    .option("--py-pm <pm>", "Python package manager: uv | pip (default: auto-detect)")
     .option("-y, --yes", "skip prompts; use flags/defaults")
     .option("-f, --force", "write into a non-empty directory")
     .action(async (name: string | undefined, opts: Record<string, unknown>) => {

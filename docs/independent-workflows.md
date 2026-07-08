@@ -4,6 +4,13 @@ A generated project is a monorepo, but every part is **self-contained** — its 
 build, and (where relevant) Dockerfile. You can develop, test, and deploy any app on its own,
 or all together. The only optional coupling is the OpenAPI-generated API client.
 
+> The commands below assume the default managers (**pnpm** + **uv**). If you generated with
+> `--js-pm npm`, use `npm run <script> -w <app>` instead of `pnpm --filter <app> <script>`. If you
+> generated with `--py-pm pip`, the server uses a `.venv` — run `python -m venv .venv &&
+> .venv/bin/python scripts/sync_deps.py` to install, then `.venv/bin/python …` in place of
+> `uv run …`. In all cases the generated `Makefile` targets (`make server`, `make web`, …) already
+> use the right commands, so `make` is the manager-agnostic path.
+
 ## The one coupling: the API contract
 
 The server owns the contract. It publishes an OpenAPI schema at `/api/schema/`; the clients

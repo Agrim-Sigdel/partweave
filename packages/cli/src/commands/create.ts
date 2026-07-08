@@ -3,6 +3,14 @@ import { basename, resolve } from "node:path";
 import { intro, log, note, outro, spinner } from "@clack/prompts";
 import pc from "picocolors";
 import { buildContext, compose, selectedTargets } from "../compose.js";
+import {
+  detectJsPm,
+  detectPyPm,
+  JS_PMS,
+  PY_PMS,
+  type JsPm,
+  type PyPm,
+} from "../pm.js";
 import { Registry } from "../registry.js";
 import { writeProjectManifest } from "../projectmanifest.js";
 import { slugify } from "../render.js";
@@ -17,8 +25,23 @@ export interface CreateFlags {
   web?: boolean;
   mobile?: boolean;
   with?: string; // comma-separated module ids
+  jsPm?: string; // pnpm | npm
+  pyPm?: string; // uv | pip
   yes?: boolean;
   force?: boolean;
+}
+
+/** Validate a --js-pm/--py-pm flag, or fall back to what's installed. */
+function resolvePm<T extends string>(
+  value: string | undefined,
+  allowed: readonly T[],
+  detect: () => T,
+  flag: string,
+): T {
+  if (value === undefined) return detect();
+  if ((allowed as readonly string[]).includes(value)) return value as T;
+  log.error(`Invalid ${flag} "${value}". Choose one of: ${allowed.join(", ")}.`);
+  process.exit(1);
 }
 
 function appsFromFlags(flags: CreateFlags): AppName[] | null {
@@ -50,6 +73,9 @@ export async function runCreate(flags: CreateFlags): Promise<void> {
   const flagApps = appsFromFlags(flags);
   const nonInteractive = flags.yes === true || flagApps !== null;
 
+  const jsPm: JsPm = resolvePm(flags.jsPm, JS_PMS, detectJsPm, "--js-pm");
+  const pyPm: PyPm = resolvePm(flags.pyPm, PY_PMS, detectPyPm, "--py-pm");
+
   let choices: RawChoices;
   if (nonInteractive) {
     const apps = flagApps ?? [...APPS];
@@ -59,11 +85,15 @@ export async function runCreate(flags: CreateFlags): Promise<void> {
       flags.with !== undefined
         ? flags.with.split(",").map((s) => s.trim()).filter(Boolean)
         : defaultModules(registry, apps);
-    choices = { projectName: name, outDir, apps, modules };
+    choices = { projectName: name, outDir, apps, modules, jsPm, pyPm };
   } else {
     choices = await promptCreate(registry, {
       projectName: flags.name,
       outDir: flags.dir ? resolve(flags.dir) : undefined,
+      // pre-select an explicitly-passed --js-pm/--py-pm; otherwise the prompt
+      // defaults to whatever is installed.
+      jsPm: flags.jsPm ? jsPm : undefined,
+      pyPm: flags.pyPm ? pyPm : undefined,
     });
   }
 
@@ -100,6 +130,8 @@ export async function runCreate(flags: CreateFlags): Promise<void> {
       outDir: choices.outDir,
       apps: choices.apps,
       modules: resolved.modules,
+      jsPm: choices.jsPm,
+      pyPm: choices.pyPm,
     };
     const targets = selectedTargets(buildContext(selection));
     result = compose({
@@ -120,6 +152,8 @@ export async function runCreate(flags: CreateFlags): Promise<void> {
     name: choices.projectName,
     apps: choices.apps,
     modules: resolved.modules,
+    jsPm: choices.jsPm,
+    pyPm: choices.pyPm,
   });
 
   const rel = basename(choices.outDir);

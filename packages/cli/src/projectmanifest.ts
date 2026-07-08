@@ -1,16 +1,22 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { writeFileEnsured } from "./fsutil.js";
+import type { JsPm, PyPm } from "./pm.js";
 import type { AppName } from "./types.js";
 
 /**
  * A small record written into every generated project (`.quick-build/manifest.json`)
- * so `quick-build add` knows what apps and components are already installed.
+ * so `quick-build add` knows what apps and components are already installed —
+ * and which package managers the project uses, so later `add`s stay consistent.
  */
 export interface ProjectManifest {
   name: string;
   apps: AppName[];
   modules: string[];
+  /** JS/TS package manager (defaults to pnpm for projects generated before this existed) */
+  jsPm?: JsPm;
+  /** Python package manager (defaults to uv for older projects) */
+  pyPm?: PyPm;
 }
 
 const REL = ".quick-build/manifest.json";

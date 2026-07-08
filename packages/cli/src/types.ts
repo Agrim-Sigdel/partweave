@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { JsPm, PyPm } from "./pm.js";
 
 /**
  * A "target" is a destination sub-project inside the generated monorepo.
@@ -95,6 +96,10 @@ export interface Selection {
   apps: AppName[];
   /** chosen feature module ids (already dependency-resolved) */
   modules: string[];
+  /** JS/TS package manager for the workspace (defaults to pnpm) */
+  jsPm?: JsPm;
+  /** Python package manager for the server (defaults to uv) */
+  pyPm?: PyPm;
 }
 
 /** Template variables available to every copied text file via {{token}}. */
@@ -108,4 +113,8 @@ export interface RenderContext {
   hasMobile: boolean;
   hasShared: boolean;
   hasApiClient: boolean;
+  /** JS/TS package manager (pnpm | npm) */
+  jsPm: JsPm;
+  /** Python package manager (uv | pip) */
+  pyPm: PyPm;
 }

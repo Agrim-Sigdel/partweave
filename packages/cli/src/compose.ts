@@ -6,6 +6,7 @@ import {
   mergePackageJsonDeps,
 } from "./inject.js";
 import { copyTree, listFiles, writeFileEnsured } from "./fsutil.js";
+import { DEFAULT_JS_PM, DEFAULT_PY_PM } from "./pm.js";
 import type { Registry } from "./registry.js";
 import { isBinaryPath, slugify } from "./render.js";
 import {
@@ -13,9 +14,11 @@ import {
   buildCiWorkflows,
   buildMakefile,
   buildNpmrc,
-  buildPnpmWorkspace,
+  buildPipSyncScript,
+  buildJsWorkspace,
   buildReadme,
   buildRootPackageJson,
+  buildServerDockerfile,
   buildTsconfigBase,
   buildTurboJson,
 } from "./rootgen.js";
@@ -64,6 +67,8 @@ export function buildContext(selection: Selection): RenderContext {
     hasMobile,
     hasShared,
     hasApiClient,
+    jsPm: selection.jsPm ?? DEFAULT_JS_PM,
+    pyPm: selection.pyPm ?? DEFAULT_PY_PM,
   };
 }
 
@@ -200,7 +205,9 @@ function writeStructuralRootFiles(
   ctx: RenderContext,
   modules: Module[],
 ): void {
-  const workspace = buildPnpmWorkspace(ctx);
+  // pnpm lists workspace members in pnpm-workspace.yaml; npm lists them in
+  // package.json's "workspaces" field (built by buildRootPackageJson).
+  const workspace = buildJsWorkspace(ctx);
   if (workspace) writeFileEnsured(join(outDir, "pnpm-workspace.yaml"), workspace);
   const rootPkg = buildRootPackageJson(ctx);
   if (rootPkg) writeFileEnsured(join(outDir, "package.json"), rootPkg);
@@ -210,6 +217,9 @@ function writeStructuralRootFiles(
   if (tsbase) writeFileEnsured(join(outDir, "tsconfig.base.json"), tsbase);
   const npmrc = buildNpmrc(ctx);
   if (npmrc) writeFileEnsured(join(outDir, ".npmrc"), npmrc);
+  // pip path: a helper that installs the server's deps from pyproject into .venv.
+  const pipSync = buildPipSyncScript(ctx);
+  if (pipSync) writeFileEnsured(join(outDir, "apps/server/scripts/sync_deps.py"), pipSync);
   const hasDocker = modules.some((m) => m.manifest.id === "docker");
   writeFileEnsured(join(outDir, "Makefile"), buildMakefile(ctx, hasDocker));
   writeFileEnsured(join(outDir, ".env.example"), buildBaseEnv(ctx));
@@ -261,6 +271,14 @@ export function compose(opts: ComposeOptions): ComposeResult {
       writeFileEnsured(join(outDir, rel), content);
       written.push(rel);
     }
+  }
+
+  // 6b. Server Dockerfile — emitted from code (not a copied template) so it can
+  // target uv or pip. The `docker` module still ships .dockerignore + compose.
+  if (selection.modules.includes("docker") && ctx.hasServer) {
+    const rel = "apps/server/Dockerfile";
+    writeFileEnsured(join(outDir, rel), buildServerDockerfile(ctx));
+    written.push(rel);
   }
 
   // 7. notes

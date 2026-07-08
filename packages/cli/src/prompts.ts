@@ -3,10 +3,18 @@ import {
   confirm,
   isCancel,
   multiselect,
+  select,
   text,
 } from "@clack/prompts";
 import pc from "picocolors";
 import { resolve } from "node:path";
+import {
+  detectJsPm,
+  detectPyPm,
+  hasCommand,
+  type JsPm,
+  type PyPm,
+} from "./pm.js";
 import type { Registry } from "./registry.js";
 import { slugify } from "./render.js";
 import { APPS, type AppName, type TargetName } from "./types.js";
@@ -16,6 +24,8 @@ export interface RawChoices {
   outDir: string;
   apps: AppName[];
   modules: string[];
+  jsPm: JsPm;
+  pyPm: PyPm;
 }
 
 /** Controls hint for checkbox (multiselect) prompts. */
@@ -89,6 +99,36 @@ export async function promptCreate(
     modules = modsRaw as string[];
   }
 
+  // Package managers — default to an explicit flag, else what's installed.
+  const anyJs = apps.includes("web") || apps.includes("mobile");
+  let jsPm: JsPm = defaults.jsPm ?? detectJsPm();
+  if (anyJs) {
+    const jsRaw = await select({
+      message: "JS/TS package manager",
+      initialValue: jsPm,
+      options: [
+        { value: "pnpm", label: "pnpm", hint: hasCommand("pnpm") ? "detected" : "not found on PATH" },
+        { value: "npm", label: "npm", hint: "ships with Node" },
+      ],
+    });
+    bail(jsRaw);
+    jsPm = jsRaw as JsPm;
+  }
+
+  let pyPm: PyPm = defaults.pyPm ?? detectPyPm();
+  if (apps.includes("server")) {
+    const pyRaw = await select({
+      message: "Python package manager (server)",
+      initialValue: pyPm,
+      options: [
+        { value: "uv", label: "uv", hint: hasCommand("uv") ? "detected · fast" : "not found on PATH" },
+        { value: "pip", label: "pip + venv", hint: "ships with Python" },
+      ],
+    });
+    bail(pyRaw);
+    pyPm = pyRaw as PyPm;
+  }
+
   const ok = await confirm({
     message: `Scaffold ${apps.join(" + ")}${modules.length ? " with " + modules.join(", ") : ""} into ${outDir}?`,
   });
@@ -98,5 +138,5 @@ export async function promptCreate(
     process.exit(0);
   }
 
-  return { projectName, outDir, apps, modules };
+  return { projectName, outDir, apps, modules, jsPm, pyPm };
 }

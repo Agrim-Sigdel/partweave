@@ -3,6 +3,12 @@ import { intro, log, note, outro, spinner } from "@clack/prompts";
 import pc from "picocolors";
 import { buildContext, compose, selectedTargets } from "../compose.js";
 import {
+  DEFAULT_JS_PM,
+  DEFAULT_PY_PM,
+  jsPmProfile,
+  pyPmProfile,
+} from "../pm.js";
+import {
   readProjectManifest,
   writeProjectManifest,
   type ProjectManifest,
@@ -23,6 +29,8 @@ const sel = (pm: ProjectManifest, dir: string, apps: AppName[]): Selection => ({
   outDir: dir,
   apps,
   modules: pm.modules,
+  jsPm: pm.jsPm,
+  pyPm: pm.pyPm,
 });
 
 /**
@@ -59,10 +67,12 @@ export async function runAdd(ids: string[], flags: AddFlags): Promise<void> {
   if (appIds.length) manifest = addApps(registry, dir, manifest, appIds);
   if (moduleIds.length) manifest = addModules(registry, dir, manifest, moduleIds);
 
+  const js = jsPmProfile(manifest.jsPm ?? DEFAULT_JS_PM);
+  const py = pyPmProfile(manifest.pyPm ?? DEFAULT_PY_PM);
   const reinstall: string[] = [];
-  if (manifest.apps.some((a) => a === "web" || a === "mobile")) reinstall.push("pnpm install");
+  if (manifest.apps.some((a) => a === "web" || a === "mobile")) reinstall.push(js.install);
   if (manifest.apps.includes("server"))
-    reinstall.push("cd apps/server && uv sync && uv run python manage.py migrate");
+    reinstall.push(`cd apps/server && ${py.syncInServer} && ${py.run("python manage.py migrate")}`);
   if (reinstall.length) note(reinstall.join("\n"), "Sync deps");
   outro(pc.green("Done."));
 }
