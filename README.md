@@ -1,41 +1,52 @@
 # quick-build — a modular full-stack scaffolder
 
-Clone this repo once, then generate new projects that contain **only the parts you pick** —
-a Django server, a Next.js web app, an Expo mobile app, and cross-cutting components
-(auth, storage, docker, CI) — all wired together.
+Generate new projects that contain **only the parts you pick** — a Django server, a
+Next.js web app, an Expo mobile app, and cross-cutting components (auth, storage, docker,
+CI) — all wired together.
 
 It's `create-t3-app` (choose your stack) meets `shadcn/ui` (you own the code that's added,
 built on clean, swappable interfaces).
 
 ## Install
 
-**Quickest — clone and go** (the launcher builds itself on first run):
+**Run it directly — no install** (always the latest published version):
+```sh
+npx quick-build create        # interactive picker
+```
+
+**Or install the command globally:**
+```sh
+npm install -g quick-build
+quick-build create            # or the short alias: qb create
+```
+> Requires Node ≥ 20. Updates are automatic with `npx`; for the global install run
+> `npm update -g quick-build`.
+
+<details>
+<summary>Install from source (contributors)</summary>
+
 ```sh
 git clone git@github.com:Agrim-Sigdel/quick-build.git ~/.quick-build && cd ~/.quick-build
-./bin/quick-build create                 # interactive
+./bin/quick-build create        # the launcher builds itself on first run
 ```
-
-**One-line install** (clones to `~/.quick-build`, builds, adds a `quick-build` command to `~/.local/bin`):
+Or the one-line installer (clones to `~/.quick-build`, builds, drops a `quick-build` /
+`qb` command into `~/.local/bin`):
 ```sh
 curl -fsSL https://raw.githubusercontent.com/Agrim-Sigdel/quick-build/main/scripts/install.sh | bash
-# then, from anywhere:
-quick-build create        # or the short alias: qb create
 ```
-> Requires `git`, Node ≥ 20, and `pnpm` (`corepack enable`). Override the source with
-> `QUICK_BUILD_REPO=<git url>`.
-
-**Global command via pnpm** (if you prefer `create-quick-build` / `quick-build` on your PATH):
-```sh
-cd ~/.quick-build && pnpm install && pnpm --filter @quick-build/cli build
-pnpm --filter @quick-build/cli link --global
-```
+</details>
 
 ### Use it
 ```sh
 quick-build create                                                    # interactive picker
 quick-build create my-app --dir ~/apps/my-app --server --mobile --with auth,docker   # scriptable
+quick-build create my-app --server --web --js-pm npm --py-pm pip       # use npm + pip instead of pnpm + uv
 cd ~/apps/my-app && quick-build add storage                           # add a component later
 ```
+
+> **No pnpm or uv?** The generator defaults to whichever managers are installed and falls back to
+> `npm` + `pip` (both bundled with Node / Python). Pick them with `--js-pm pnpm|npm` and
+> `--py-pm uv|pip`, or in the interactive prompt.
 
 ## What you can generate
 
@@ -43,7 +54,7 @@ cd ~/apps/my-app && quick-build add storage                           # add a co
 
 | App | Stack |
 | --- | --- |
-| `server` | Django 5 + DRF, managed by `uv` (Python 3.12), SQLite by default |
+| `server` | Django 5 + DRF, managed by `uv` or `pip` (Python 3.12), SQLite by default |
 | `web` | Next.js 14 (App Router) + TypeScript + Tailwind |
 | `mobile` | Expo (React Native) + Expo Router + TypeScript |
 
@@ -95,9 +106,24 @@ components worth adding, and [authoring-a-module.md](docs/authoring-a-module.md)
 ## Development
 
 ```sh
-pnpm --filter @quick-build/cli build      # build the CLI
-pnpm --filter @quick-build/cli typecheck  # typecheck the engine
+pnpm --filter quick-build build      # build the CLI
+pnpm --filter quick-build typecheck  # typecheck the engine
 ```
 
 The generator locates the catalog by walking up from the CLI to find `modules/`.
 Override with `QUICK_BUILD_MODULES_DIR=/path/to/modules`.
+
+## Releasing
+
+The CLI is published to npm as [`quick-build`](https://www.npmjs.com/package/quick-build).
+Publishing is automated by [`.github/workflows/publish.yml`](.github/workflows/publish.yml):
+push a version tag and CI builds, bundles `modules/`, and publishes.
+
+```sh
+npm version patch --workspace quick-build   # bump version + create a matching git tag (v0.1.1)
+git push --follow-tags                       # push the tag → CI publishes to npm
+```
+
+> One-time setup: add an `NPM_TOKEN` (an npm "Automation" access token) to the repo's
+> **Settings → Secrets and variables → Actions**. The `prepack` script copies `modules/` +
+> README + LICENSE into the package, so `npm publish` ships a self-contained CLI.

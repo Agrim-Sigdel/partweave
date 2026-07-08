@@ -16,10 +16,16 @@ CLI="$DIR/packages/cli/dist/index.js"
 
 if [ ! -f "$CLI" ]; then
   echo "▸ First run — installing dependencies and building the CLI…" >&2
-  if ! command -v pnpm >/dev/null 2>&1; then
-    corepack enable >/dev/null 2>&1 || true
+  command -v pnpm >/dev/null 2>&1 || corepack enable >/dev/null 2>&1 || true
+  # Prefer pnpm; fall back to npm so a machine without pnpm still works.
+  if command -v pnpm >/dev/null 2>&1; then
+    (cd "$DIR" && pnpm install && pnpm --filter quick-build build) >&2
+  elif command -v npm >/dev/null 2>&1; then
+    (cd "$DIR" && npm install && npm run build -w quick-build) >&2
+  else
+    echo "✗ need pnpm or npm to build the CLI (both come with Node)" >&2
+    exit 1
   fi
-  (cd "$DIR" && pnpm install && pnpm --filter @quick-build/cli build) >&2
 fi
 
 exec node "$CLI" "$@"

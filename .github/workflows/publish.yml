@@ -1,0 +1,48 @@
+name: Publish to npm
+
+# Publishes the `quick-build` CLI to npm whenever you push a version tag, e.g.:
+#   npm version patch --workspace quick-build   # bumps version + creates a git tag
+#   git push --follow-tags
+# The tag (v0.2.0) must match the package.json version, or the run fails fast.
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # enables npm provenance
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check tag matches package.json version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p "require('./packages/cli/package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "✗ tag v$TAG does not match package.json version $PKG" >&2
+            exit 1
+          fi
+          echo "▸ Publishing quick-build@$PKG"
+
+      # `npm publish` runs the package's `prepack` script, which builds the CLI
+      # and bundles modules/ + README + LICENSE into the tarball.
+      - name: Publish
+        run: npm publish --provenance --access public
+        working-directory: packages/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

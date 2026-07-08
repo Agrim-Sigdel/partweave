@@ -1,20 +1,24 @@
 {
-  "name": "quick-build",
+  "name": "quick-build-monorepo",
   "version": "0.1.0",
   "private": true,
   "description": "A modular full-stack scaffolding platform — pick the parts you need (Django server, Next.js web, Expo mobile) and generate only that code, wired together.",
   "type": "module",
   "packageManager": "pnpm@10.20.0",
+  "workspaces": [
+    "packages/*"
+  ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "build": "pnpm --filter @quick-build/cli build",
-    "dev": "pnpm --filter @quick-build/cli dev",
-    "cli": "pnpm --filter @quick-build/cli exec quick-build",
-    "create": "pnpm --filter @quick-build/cli exec create-quick-build",
-    "test": "pnpm --filter @quick-build/cli test",
-    "typecheck": "pnpm -r typecheck"
+    "build": "pnpm --filter quick-build build",
+    "dev": "pnpm --filter quick-build dev",
+    "cli": "pnpm --filter quick-build exec quick-build",
+    "create": "pnpm --filter quick-build exec create-quick-build",
+    "test": "pnpm --filter quick-build test",
+    "typecheck": "pnpm -r typecheck",
+    "release": "pnpm --filter quick-build exec npm version"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

@@ -1,22 +1,53 @@
 {
-  "name": "@quick-build/cli",
+  "name": "quick-build",
   "version": "0.1.0",
-  "description": "The quick-build generator — compose a full-stack project from selectable modules.",
+  "description": "A modular full-stack scaffolder — pick the parts you need (Django server, Next.js web, Expo mobile) and generate only that code, wired together.",
   "type": "module",
+  "license": "MIT",
+  "author": "Agrim Sigdel",
+  "homepage": "https://github.com/Agrim-Sigdel/quick-build#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Agrim-Sigdel/quick-build.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/Agrim-Sigdel/quick-build/issues"
+  },
+  "keywords": [
+    "scaffold",
+    "scaffolder",
+    "generator",
+    "boilerplate",
+    "full-stack",
+    "django",
+    "nextjs",
+    "expo",
+    "monorepo",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
-    "create-quick-build": "dist/create-bin.js",
-    "quick-build": "dist/index.js"
+    "quick-build": "dist/index.js",
+    "qb": "dist/index.js",
+    "create-quick-build": "dist/create-bin.js"
   },
   "files": [
     "dist",
-    "../../modules"
+    "modules",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "bundle-modules": "node scripts/bundle-modules.mjs",
+    "prepack": "npm run build && npm run bundle-modules"
   },
   "dependencies": {
     "@clack/prompts": "^0.9.1",
