@@ -17,7 +17,12 @@ environ.Env.read_env(BASE_DIR.parent.parent / ".env")
 
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="dev-insecure-change-me")
 DEBUG = env.bool("DJANGO_DEBUG", default=True)
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+# In DEBUG, allow any host so a phone/simulator can reach the dev server over the
+# LAN. In production set DJANGO_DEBUG=false and provide DJANGO_ALLOWED_HOSTS.
+ALLOWED_HOSTS = env.list(
+    "DJANGO_ALLOWED_HOSTS",
+    default=["*"] if DEBUG else ["localhost", "127.0.0.1"],
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",

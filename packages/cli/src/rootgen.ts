@@ -169,7 +169,14 @@ export function buildBaseEnv(ctx: RenderContext): string {
     lines.push("# --- web ---", "NEXT_PUBLIC_API_URL=http://localhost:8000", "");
   }
   if (ctx.hasMobile) {
-    lines.push("# --- mobile ---", "EXPO_PUBLIC_API_URL=http://localhost:8000", "");
+    lines.push(
+      "# --- mobile (Expo) ---",
+      "# In dev the app auto-detects your machine's LAN IP so a physical device can",
+      "# reach the server — leave this unset. Set it for simulators or production,",
+      "# in the environment or apps/mobile/.env (Expo reads EXPO_PUBLIC_* from there).",
+      "# EXPO_PUBLIC_API_URL=http://localhost:8000",
+      "",
+    );
   }
   return lines.join("\n");
 }
