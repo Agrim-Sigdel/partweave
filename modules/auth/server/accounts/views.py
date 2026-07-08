@@ -13,6 +13,10 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
+    # Registration is public: don't attempt JWT authentication at all. Otherwise a
+    # stale/expired token sent by a client would make authentication fail with 401
+    # before AllowAny is ever checked, blocking registration.
+    authentication_classes: list = []
 
 
 class MeView(APIView):

@@ -22,3 +22,23 @@ def test_register_login_me():
 
     # unauthenticated request is rejected
     assert client.get("/api/auth/me").status_code == 401
+
+
+@pytest.mark.django_db
+def test_register_ignores_stale_token():
+    """A leftover/invalid token in the client must not block registration.
+
+    Regression test: register is public, so authentication must not run on it —
+    otherwise a stale Authorization header 401s before AllowAny is checked.
+    """
+    from django.test import Client
+
+    client = Client()
+    creds = {"email": "c@d.com", "password": "supersecret"}
+    r = client.post(
+        "/api/auth/register",
+        creds,
+        content_type="application/json",
+        HTTP_AUTHORIZATION="Bearer this.is.a.stale.garbage.token",
+    )
+    assert r.status_code == 201, r.content
