@@ -1,6 +1,6 @@
 {
   "name": "@agrimsigdel/quick-build",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A modular full-stack scaffolder — pick the parts you need (Django server, Next.js web, Expo mobile) and generate only that code, wired together.",
   "type": "module",
   "license": "MIT",
