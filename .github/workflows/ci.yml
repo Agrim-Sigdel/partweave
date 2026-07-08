@@ -1,0 +1,105 @@
+name: CI
+
+# Generates real projects from the templates and runs their checks, so a broken
+# module can't be published. Runs on PRs/pushes and is called by publish.yml
+# (via workflow_call) so a release is blocked unless the generated output is green.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+env:
+  CLI: "@agrimsigdel/quick-build"
+
+jobs:
+  js:
+    name: typecheck + unit tests (full stack)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Build the generator
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter "$CLI" build
+      - name: Scaffold server + web + mobile with auth, storage, example
+        run: node packages/cli/dist/index.js create app --dir "$RUNNER_TEMP/app" --server --web --mobile --with auth,storage,example --yes
+      - name: Install generated deps
+        working-directory: ${{ runner.temp }}/app
+        run: pnpm install
+      - name: Typecheck every package
+        working-directory: ${{ runner.temp }}/app
+        run: pnpm -r typecheck
+      - name: Unit tests (web vitest + mobile jest)
+        working-directory: ${{ runner.temp }}/app
+        run: pnpm -r test
+
+  web-build:
+    name: web production build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Build the generator
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter "$CLI" build
+      # web-only (no mobile): a single React version, the supported build combo.
+      # The web+mobile build combo has a known React 18/19 duplication issue.
+      - name: Scaffold server + web with auth
+        run: node packages/cli/dist/index.js create app --dir "$RUNNER_TEMP/app" --server --web --no-mobile --with auth --yes
+      - name: Install + build web
+        working-directory: ${{ runner.temp }}/app
+        run: |
+          pnpm install
+          pnpm --filter web build
+
+  server:
+    name: server tests (pytest + postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Build the generator
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter "$CLI" build
+      - name: Scaffold server + web with auth
+        run: node packages/cli/dist/index.js create app --dir "$RUNNER_TEMP/app" --server --web --no-mobile --with auth --yes
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+      - name: Install deps + run server tests
+        working-directory: ${{ runner.temp }}/app/apps/server
+        env:
+          DATABASE_URL: postgres://app:app@localhost:5432/app
+        run: |
+          uv sync
+          uv run pytest -q
