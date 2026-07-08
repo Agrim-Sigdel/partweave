@@ -31,14 +31,14 @@ export type AppName = (typeof APPS)[number];
 
 /**
  * Named convenience wiring fields map to well-known anchors in the _core
- * scaffolds. `<base:installed-apps>` etc. `anchors` is the generic escape hatch.
+ * scaffolds. `<quick-build:installed-apps>` etc. `anchors` is the generic escape hatch.
  */
 const WiringForTargetSchema = z.object({
-  installedApps: z.array(z.string()).optional(), // server → <base:installed-apps>
-  urls: z.array(z.string()).optional(), // server → <base:urls>
-  settings: z.array(z.string()).optional(), // server → <base:settings>
-  providers: z.array(z.string()).optional(), // web/mobile → <base:providers>
-  routes: z.array(z.string()).optional(), // web/mobile → <base:routes>
+  installedApps: z.array(z.string()).optional(), // server → <quick-build:installed-apps>
+  urls: z.array(z.string()).optional(), // server → <quick-build:urls>
+  settings: z.array(z.string()).optional(), // server → <quick-build:settings>
+  providers: z.array(z.string()).optional(), // web/mobile → <quick-build:providers>
+  routes: z.array(z.string()).optional(), // web/mobile → <quick-build:routes>
   deps: z.array(z.string()).optional(), // merged into pyproject/package.json
   anchors: z.record(z.array(z.string())).optional(), // generic anchorId → lines
 });

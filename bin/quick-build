@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Thin launcher for the base CLI. Builds on first run, then execs the generator.
-# Usage: ./bin/base create   |   ./bin/base add <component>
+# Thin launcher for the quick-build CLI. Builds on first run, then execs it.
+# Usage: ./bin/quick-build create   |   ./bin/quick-build add <component>
 set -euo pipefail
 
 # Resolve symlinks so this works whether run in-repo or via a symlinked launcher
-# (e.g. ~/.local/bin/base -> ~/.base/bin/base).
+# (e.g. ~/.local/bin/quick-build -> ~/.quick-build/bin/quick-build).
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do
   LINK_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
@@ -19,7 +19,7 @@ if [ ! -f "$CLI" ]; then
   if ! command -v pnpm >/dev/null 2>&1; then
     corepack enable >/dev/null 2>&1 || true
   fi
-  (cd "$DIR" && pnpm install && pnpm --filter @base/cli build) >&2
+  (cd "$DIR" && pnpm install && pnpm --filter @quick-build/cli build) >&2
 fi
 
 exec node "$CLI" "$@"

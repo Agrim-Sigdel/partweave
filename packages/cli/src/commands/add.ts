@@ -13,22 +13,22 @@ export interface AddFlags {
   dir?: string;
 }
 
-/** `base-cli add <module...>` — adds components to an existing project. */
+/** `quick-build add <module...>` — adds components to an existing project. */
 export async function runAdd(moduleIds: string[], flags: AddFlags): Promise<void> {
-  intro(pc.bgCyan(pc.black(" base ")) + pc.dim(" add component"));
+  intro(pc.bgCyan(pc.black(" quick-build ")) + pc.dim(" add component"));
   const dir = resolve(flags.dir ?? process.cwd());
 
   const pm = readProjectManifest(dir);
   if (!pm) {
     log.error(
-      `No base project found at ${dir} (missing .base/manifest.json). ` +
+      `No quick-build project found at ${dir} (missing .quick-build/manifest.json). ` +
         `Run this from inside a generated project, or pass --dir.`,
     );
     process.exit(1);
   }
 
   if (moduleIds.length === 0) {
-    log.error("Specify at least one component to add, e.g. `base-cli add storage`.");
+    log.error("Specify at least one component to add, e.g. `quick-build add storage`.");
     process.exit(1);
   }
 

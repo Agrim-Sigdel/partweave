@@ -1,14 +1,14 @@
 "use client";
 
 import type { ComponentType, ReactNode } from "react";
-// <base:providers-import>
+// <quick-build:providers-import>
 
 /**
  * Context providers, composed outside-in. Components register their provider
  * at the anchor below; the base scaffold ships with none.
  */
 const providers: ComponentType<{ children: ReactNode }>[] = [
-  // <base:providers>
+  // <quick-build:providers>
 ];
 
 export function Providers({ children }: { children: ReactNode }) {

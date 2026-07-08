@@ -4,8 +4,8 @@ import { writeFileEnsured } from "./fsutil.js";
 import type { AppName } from "./types.js";
 
 /**
- * A small record written into every generated project (`.base/manifest.json`)
- * so `base-cli add` knows what apps and components are already installed.
+ * A small record written into every generated project (`.quick-build/manifest.json`)
+ * so `quick-build add` knows what apps and components are already installed.
  */
 export interface ProjectManifest {
   name: string;
@@ -13,7 +13,7 @@ export interface ProjectManifest {
   modules: string[];
 }
 
-const REL = ".base/manifest.json";
+const REL = ".quick-build/manifest.json";
 
 export function readProjectManifest(dir: string): ProjectManifest | null {
   const p = join(dir, REL);

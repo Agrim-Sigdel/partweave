@@ -7,7 +7,7 @@ export { runCreate, runAdd };
 export function buildProgram(): Command {
   const program = new Command();
   program
-    .name("base-cli")
+    .name("quick-build")
     .description("A modular full-stack scaffolder — pick parts, generate only that code.")
     .version("0.1.0");
 
@@ -46,7 +46,7 @@ export async function main(argv: string[] = process.argv): Promise<void> {
   await buildProgram().parseAsync(argv);
 }
 
-// Executed directly (base-cli bin)
+// Executed directly (quick-build bin)
 main().catch((err) => {
   console.error(err instanceof Error ? err.message : err);
   process.exit(1);

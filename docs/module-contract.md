@@ -36,7 +36,7 @@ apps at once.
 
 ## Wiring (per target)
 
-Wiring injects lines at **anchors** — comments of the form `<base:ANCHOR_ID>` in the `_core`
+Wiring injects lines at **anchors** — comments of the form `<quick-build:ANCHOR_ID>` in the `_core`
 scaffolds. Injection is idempotent (a line already present is skipped) and preserves the
 anchor's indentation.
 
@@ -44,20 +44,20 @@ Convenience fields map to well-known anchors:
 
 | field | anchor | typical target |
 | --- | --- | --- |
-| `installedApps` | `<base:installed-apps>` | server `settings.py` |
-| `urls` | `<base:urls>` | server `urls.py` |
-| `settings` | `<base:settings>` | server `settings.py` |
-| `providers` | `<base:providers>` | web/mobile `providers.tsx` |
-| `routes` | `<base:routes>` | web/mobile `nav.ts` |
+| `installedApps` | `<quick-build:installed-apps>` | server `settings.py` |
+| `urls` | `<quick-build:urls>` | server `urls.py` |
+| `settings` | `<quick-build:settings>` | server `settings.py` |
+| `providers` | `<quick-build:providers>` | web/mobile `providers.tsx` |
+| `routes` | `<quick-build:routes>` | web/mobile `nav.ts` |
 
 Plus two special keys:
 
 - `deps` — dependency specifiers. For `server` they're injected into the pyproject
-  `<base:deps>` anchor (`"pkg>=x"`); for JS targets they're merged into `package.json`
+  `<quick-build:deps>` anchor (`"pkg>=x"`); for JS targets they're merged into `package.json`
   (`"name@version"`; use `@app/shared@workspace:*` for workspace packages).
 - `anchors` — an escape hatch: `{ "any-anchor-id": ["line", ...] }` for anchors without a
-  convenience field (e.g. server `<base:drf-auth>`, shared `<base:exports>`, web
-  `<base:providers-import>`).
+  convenience field (e.g. server `<quick-build:drf-auth>`, shared `<quick-build:exports>`, web
+  `<quick-build:providers-import>`).
 
 ### Example
 

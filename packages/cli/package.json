@@ -1,11 +1,11 @@
 {
-  "name": "@base/cli",
+  "name": "@quick-build/cli",
   "version": "0.1.0",
-  "description": "The base generator — compose a full-stack project from selectable modules.",
+  "description": "The quick-build generator — compose a full-stack project from selectable modules.",
   "type": "module",
   "bin": {
-    "create-base-app": "dist/create-bin.js",
-    "base-cli": "dist/index.js"
+    "create-quick-build": "dist/create-bin.js",
+    "quick-build": "dist/index.js"
   },
   "files": [
     "dist",

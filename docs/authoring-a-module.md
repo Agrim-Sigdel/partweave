@@ -44,8 +44,8 @@ concrete class — so a new backend is just a new file + a settings value.
 
 ## 3. Wire in at anchors
 
-Add lines to existing `<base:...>` anchors via `wiring`. If you need a brand-new anchor, add
-the comment to the relevant `_core` scaffold (e.g. `# <base:my-anchor>` in `settings.py`) and
+Add lines to existing `<quick-build:...>` anchors via `wiring`. If you need a brand-new anchor, add
+the comment to the relevant `_core` scaffold (e.g. `# <quick-build:my-anchor>` in `settings.py`) and
 reference it from `wiring.<target>.anchors`. The generator errors loudly if a module references
 an anchor that doesn't exist — that's your signal to add it to `_core`.
 
@@ -58,13 +58,13 @@ an anchor that doesn't exist — that's your signal to add it to `_core`.
 ## 5. Test it
 
 ```sh
-pnpm --filter @base/cli build
+pnpm --filter @quick-build/cli build
 node packages/cli/dist/index.js create t --dir /tmp/t --server --with notifications --force
 cd /tmp/t/apps/server && uv sync && uv run pytest -q
 ```
 
 Ship a test under `modules/notifications/server/tests/` — it's copied alongside the app and
-runs with the rest of the suite. Also confirm `base-cli add notifications` works on an existing
+runs with the rest of the suite. Also confirm `quick-build add notifications` works on an existing
 project (the same composer powers both, so idempotent anchor injection is all you need).
 
 ## Recipes by feature type

@@ -1,6 +1,6 @@
 # What you can create
 
-`base` generates a monorepo containing **only the parts you select**. This page covers every
+`quick-build` generates a monorepo containing **only the parts you select**. This page covers every
 app and component available today, the CLI, and common project shapes.
 
 ## The command
@@ -86,4 +86,4 @@ make gen-api                   # regenerate the typed client (if api-client pres
 ```
 
 Copy `.env.example` → `.env` and fill in values first. Each project also records what it
-contains in `.base/manifest.json`, which powers `add` (below).
+contains in `.quick-build/manifest.json`, which powers `add` (below).

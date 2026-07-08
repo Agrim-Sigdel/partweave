@@ -49,7 +49,7 @@ export function buildContext(selection: Selection): RenderContext {
   return {
     projectName: selection.projectName,
     projectSlug: slugify(selection.projectName),
-    description: `${selection.projectName} — generated with base.`,
+    description: `${selection.projectName} — generated with quick-build.`,
     apps: selection.apps,
     hasServer,
     hasWeb,
@@ -78,10 +78,10 @@ const COPY_ORDER: TargetName[] = [
   "api-client",
 ];
 
-/** Scan a directory tree for `<base:id>` anchors → the files that contain them. */
+/** Scan a directory tree for `<quick-build:id>` anchors → the files that contain them. */
 function buildAnchorIndex(dir: string): Map<string, string[]> {
   const index = new Map<string, string[]>();
-  const re = /<base:([\w-]+)>/g;
+  const re = /<quick-build:([\w-]+)>/g;
   for (const rel of listFiles(dir)) {
     const abs = join(dir, rel);
     if (isBinaryPath(abs)) continue;
@@ -120,7 +120,7 @@ function injectIntoFiles(
   const files = index.get(anchorId);
   if (!files || files.length === 0) {
     throw new Error(
-      `Wiring error: anchor <base:${anchorId}> not found in ${targetLabel}. ` +
+      `Wiring error: anchor <quick-build:${anchorId}> not found in ${targetLabel}. ` +
         `Add the anchor to the _core/${targetLabel} scaffold.`,
     );
   }
@@ -158,7 +158,7 @@ function applyWiring(
       // dependency merging
       if (wiring.deps?.length) {
         if (t === "server") {
-          // Python deps → inject into pyproject's <base:deps> anchor
+          // Python deps → inject into pyproject's <quick-build:deps> anchor
           const lines = wiring.deps.map((d) => `"${d}",`);
           injectIntoFiles(index, "deps", lines, t);
         } else {

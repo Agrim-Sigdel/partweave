@@ -1,6 +1,6 @@
 # Feature catalog — build once, include everywhere
 
-The point of `base` is that the boilerplate you'd otherwise rewrite in every project lives here
+The point of `quick-build` is that the boilerplate you'd otherwise rewrite in every project lives here
 **once**, as a selectable component. You add it with a checkbox (or `--with`), you own the code,
 and it's built on swappable interfaces so you can change the implementation without a rewrite.
 

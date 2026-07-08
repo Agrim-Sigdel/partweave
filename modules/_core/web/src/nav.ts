@@ -5,5 +5,5 @@ export interface NavLink {
 
 /** Components register their pages here; the home page lists them. */
 export const navLinks: NavLink[] = [
-  // <base:routes>
+  // <quick-build:routes>
 ];

@@ -247,7 +247,7 @@ export function buildReadme(
 ): string {
   const parts: string[] = [];
   parts.push(`# ${ctx.projectName}`, "", ctx.description, "");
-  parts.push("Generated with **base** — a modular full-stack scaffolder.", "");
+  parts.push("Generated with **quick-build** — a modular full-stack scaffolder.", "");
 
   parts.push("## What's inside", "");
   if (ctx.hasServer) parts.push("- `apps/server` — Django + DRF API (managed by `uv`)");

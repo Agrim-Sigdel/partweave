@@ -5,5 +5,5 @@ export interface NavLink {
 
 /** Components register their screens here; the home screen lists them. */
 export const navLinks: NavLink[] = [
-  // <base:routes>
+  // <quick-build:routes>
 ];

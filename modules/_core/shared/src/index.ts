@@ -6,6 +6,6 @@
  * implementations stay swappable per platform.
  */
 
-// <base:exports>
+// <quick-build:exports>
 
 export {};

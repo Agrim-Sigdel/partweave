@@ -6,16 +6,16 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 /**
  * Locate the `modules/` catalog. Order:
- *   1. BASE_MODULES_DIR env override
+ *   1. QUICK_BUILD_MODULES_DIR env override
  *   2. walk up from this file looking for a `modules/_core` folder
  * Works whether run from src (tsx) or dist (built).
  */
 export function findModulesDir(): string {
-  const override = process.env.BASE_MODULES_DIR;
+  const override = process.env.QUICK_BUILD_MODULES_DIR;
   if (override) {
     const abs = resolve(override);
     if (existsSync(join(abs, "_core"))) return abs;
-    throw new Error(`BASE_MODULES_DIR=${override} has no _core/ inside it`);
+    throw new Error(`QUICK_BUILD_MODULES_DIR=${override} has no _core/ inside it`);
   }
 
   let cur = here;
@@ -27,6 +27,6 @@ export function findModulesDir(): string {
     cur = parent;
   }
   throw new Error(
-    "Could not locate the modules/ catalog. Set BASE_MODULES_DIR to point at it.",
+    "Could not locate the modules/ catalog. Set QUICK_BUILD_MODULES_DIR to point at it.",
   );
 }

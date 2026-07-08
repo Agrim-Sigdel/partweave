@@ -1,4 +1,4 @@
-# base — a modular full-stack scaffolder
+# quick-build — a modular full-stack scaffolder
 
 Clone this repo once, then generate new projects that contain **only the parts you pick** —
 a Django server, a Next.js web app, an Expo mobile app, and cross-cutting components
@@ -11,30 +11,30 @@ built on clean, swappable interfaces).
 
 **Quickest — clone and go** (the launcher builds itself on first run):
 ```sh
-git clone <this-repo-url> ~/.base && cd ~/.base
-./bin/base create                 # interactive
+git clone git@github.com:Agrim-Sigdel/quick-build.git ~/.quick-build && cd ~/.quick-build
+./bin/quick-build create                 # interactive
 ```
 
-**One-line install** (clones to `~/.base`, builds, adds a `base` command to `~/.local/bin`):
+**One-line install** (clones to `~/.quick-build`, builds, adds a `quick-build` command to `~/.local/bin`):
 ```sh
-curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/master/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Agrim-Sigdel/quick-build/main/scripts/install.sh | bash
 # then, from anywhere:
-base create
+quick-build create        # or the short alias: qb create
 ```
-> Set the repo first: edit `OWNER/REPO` in `scripts/install.sh`, or run with
-> `BASE_REPO=<git url> bash`. Requires `git`, Node ≥ 20, and `pnpm` (`corepack enable`).
+> Requires `git`, Node ≥ 20, and `pnpm` (`corepack enable`). Override the source with
+> `QUICK_BUILD_REPO=<git url>`.
 
-**Global command via pnpm** (if you prefer `create-base-app` / `base-cli` on your PATH):
+**Global command via pnpm** (if you prefer `create-quick-build` / `quick-build` on your PATH):
 ```sh
-cd ~/.base && pnpm install && pnpm --filter @base/cli build
-pnpm --filter @base/cli link --global
+cd ~/.quick-build && pnpm install && pnpm --filter @quick-build/cli build
+pnpm --filter @quick-build/cli link --global
 ```
 
 ### Use it
 ```sh
-base create                                                    # interactive picker
-base create my-app --dir ~/apps/my-app --server --mobile --with auth,docker   # scriptable
-cd ~/apps/my-app && base add storage                           # add a component later
+quick-build create                                                    # interactive picker
+quick-build create my-app --dir ~/apps/my-app --server --mobile --with auth,docker   # scriptable
+cd ~/apps/my-app && quick-build add storage                           # add a component later
 ```
 
 ## What you can generate
@@ -71,7 +71,7 @@ Two pieces:
 - **`modules/`** — the catalog. `_core/` holds the bare, feature-less scaffolds (with wiring
   anchors); every other folder is a component described by a `module.json` manifest.
 - **`packages/cli/`** — the composer. It resolves your selection, copies only the needed files,
-  and injects wiring at deterministic `# <base:...>` anchors (idempotent, so `add` works too).
+  and injects wiring at deterministic `# <quick-build:...>` anchors (idempotent, so `add` works too).
 
 The output is a self-contained monorepo where each app can be developed and deployed on its own.
 
@@ -95,9 +95,9 @@ components worth adding, and [authoring-a-module.md](docs/authoring-a-module.md)
 ## Development
 
 ```sh
-pnpm --filter @base/cli build      # build the CLI
-pnpm --filter @base/cli typecheck  # typecheck the engine
+pnpm --filter @quick-build/cli build      # build the CLI
+pnpm --filter @quick-build/cli typecheck  # typecheck the engine
 ```
 
 The generator locates the catalog by walking up from the CLI to find `modules/`.
-Override with `BASE_MODULES_DIR=/path/to/modules`.
+Override with `QUICK_BUILD_MODULES_DIR=/path/to/modules`.

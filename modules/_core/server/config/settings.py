@@ -1,7 +1,7 @@
 """
 Django settings for {{projectName}}.
 
-Feature modules extend this file only at the `# <base:...>` anchors below, so
+Feature modules extend this file only at the `# <quick-build:...>` anchors below, so
 the base scaffold stays clean and re-generation is deterministic.
 """
 from pathlib import Path
@@ -29,7 +29,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "corsheaders",
-    # <base:installed-apps>
+    # <quick-build:installed-apps>
 ]
 
 MIDDLEWARE = [
@@ -88,7 +88,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        # <base:drf-auth>
+        # <quick-build:drf-auth>
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
@@ -104,4 +104,4 @@ SPECTACULAR_SETTINGS = {
 # Allow all origins in DEBUG so local web/mobile clients can call the API.
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 
-# <base:settings>
+# <quick-build:settings>
