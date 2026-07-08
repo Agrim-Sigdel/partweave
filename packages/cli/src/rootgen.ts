@@ -60,7 +60,14 @@ export function buildMakefile(ctx: RenderContext, hasDocker: boolean): string {
 
   if (ctx.hasServer) {
     if (hasDocker) {
-      add("db-up", ["docker compose -f infra/docker-compose.yml up -d db"], "start Postgres");
+      add(
+        "db-up",
+        [
+          '@docker info >/dev/null 2>&1 || { echo "Docker isn\'t running — start Docker Desktop and wait for it to be ready, then retry."; exit 1; }',
+          "docker compose -f infra/docker-compose.yml up -d db",
+        ],
+        "start Postgres (needs Docker running)",
+      );
       add("db-down", ["docker compose -f infra/docker-compose.yml down"], "stop Postgres");
     }
     add("migrate", ["cd apps/server && uv run python manage.py migrate"], "run migrations");
