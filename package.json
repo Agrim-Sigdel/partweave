@@ -12,13 +12,13 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "pnpm --filter quick-build build",
-    "dev": "pnpm --filter quick-build dev",
-    "cli": "pnpm --filter quick-build exec quick-build",
-    "create": "pnpm --filter quick-build exec create-quick-build",
-    "test": "pnpm --filter quick-build test",
+    "build": "pnpm --filter @agrimsigdel/quick-build build",
+    "dev": "pnpm --filter @agrimsigdel/quick-build dev",
+    "cli": "pnpm --filter @agrimsigdel/quick-build exec quick-build",
+    "create": "pnpm --filter @agrimsigdel/quick-build exec create-quick-build",
+    "test": "pnpm --filter @agrimsigdel/quick-build test",
     "typecheck": "pnpm -r typecheck",
-    "release": "pnpm --filter quick-build exec npm version"
+    "release": "pnpm --filter @agrimsigdel/quick-build exec npm version"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

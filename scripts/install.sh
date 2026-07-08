@@ -40,9 +40,9 @@ fi
 
 say "Installing dependencies and building the CLI with $PM"
 if [ "$PM" = pnpm ]; then
-  (cd "$HOME_DIR" && pnpm install && pnpm --filter quick-build build)
+  (cd "$HOME_DIR" && pnpm install && pnpm --filter @agrimsigdel/quick-build build)
 else
-  (cd "$HOME_DIR" && npm install && npm run build -w quick-build)
+  (cd "$HOME_DIR" && npm install && npm run build -w @agrimsigdel/quick-build)
 fi
 
 mkdir -p "$BIN_DIR"

@@ -1,9 +1,12 @@
 {
-  "name": "quick-build",
+  "name": "@agrimsigdel/quick-build",
   "version": "0.1.0",
   "description": "A modular full-stack scaffolder — pick the parts you need (Django server, Next.js web, Expo mobile) and generate only that code, wired together.",
   "type": "module",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "author": "Agrim Sigdel",
   "homepage": "https://github.com/Agrim-Sigdel/quick-build#readme",
   "repository": {

@@ -1,7 +1,7 @@
 name: Publish to npm
 
 # Publishes the `quick-build` CLI to npm whenever you push a version tag, e.g.:
-#   npm version patch --workspace quick-build   # bumps version + creates a git tag
+#   npm version patch --workspace @agrimsigdel/quick-build   # bumps version + creates a git tag
 #   git push --follow-tags
 # The tag (v0.2.0) must match the package.json version, or the run fails fast.
 on:

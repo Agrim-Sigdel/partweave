@@ -58,7 +58,7 @@ an anchor that doesn't exist — that's your signal to add it to `_core`.
 ## 5. Test it
 
 ```sh
-pnpm --filter quick-build build
+pnpm --filter @agrimsigdel/quick-build build
 node packages/cli/dist/index.js create t --dir /tmp/t --server --with notifications --force
 cd /tmp/t/apps/server && uv sync && uv run pytest -q
 ```

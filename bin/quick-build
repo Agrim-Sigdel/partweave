@@ -19,9 +19,9 @@ if [ ! -f "$CLI" ]; then
   command -v pnpm >/dev/null 2>&1 || corepack enable >/dev/null 2>&1 || true
   # Prefer pnpm; fall back to npm so a machine without pnpm still works.
   if command -v pnpm >/dev/null 2>&1; then
-    (cd "$DIR" && pnpm install && pnpm --filter quick-build build) >&2
+    (cd "$DIR" && pnpm install && pnpm --filter @agrimsigdel/quick-build build) >&2
   elif command -v npm >/dev/null 2>&1; then
-    (cd "$DIR" && npm install && npm run build -w quick-build) >&2
+    (cd "$DIR" && npm install && npm run build -w @agrimsigdel/quick-build) >&2
   else
     echo "✗ need pnpm or npm to build the CLI (both come with Node)" >&2
     exit 1

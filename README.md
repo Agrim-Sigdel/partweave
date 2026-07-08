@@ -11,16 +11,16 @@ built on clean, swappable interfaces).
 
 **Run it directly — no install** (always the latest published version):
 ```sh
-npx quick-build create        # interactive picker
+npx @agrimsigdel/quick-build create        # interactive picker
 ```
 
 **Or install the command globally:**
 ```sh
-npm install -g quick-build
+npm install -g @agrimsigdel/quick-build
 quick-build create            # or the short alias: qb create
 ```
 > Requires Node ≥ 20. Updates are automatic with `npx`; for the global install run
-> `npm update -g quick-build`.
+> `npm update -g @agrimsigdel/quick-build`.
 
 <details>
 <summary>Install from source (contributors)</summary>
@@ -106,8 +106,8 @@ components worth adding, and [authoring-a-module.md](docs/authoring-a-module.md)
 ## Development
 
 ```sh
-pnpm --filter quick-build build      # build the CLI
-pnpm --filter quick-build typecheck  # typecheck the engine
+pnpm --filter @agrimsigdel/quick-build build      # build the CLI
+pnpm --filter @agrimsigdel/quick-build typecheck  # typecheck the engine
 ```
 
 The generator locates the catalog by walking up from the CLI to find `modules/`.
@@ -115,12 +115,12 @@ Override with `QUICK_BUILD_MODULES_DIR=/path/to/modules`.
 
 ## Releasing
 
-The CLI is published to npm as [`quick-build`](https://www.npmjs.com/package/quick-build).
+The CLI is published to npm as [`@agrimsigdel/quick-build`](https://www.npmjs.com/package/@agrimsigdel/quick-build).
 Publishing is automated by [`.github/workflows/publish.yml`](.github/workflows/publish.yml):
 push a version tag and CI builds, bundles `modules/`, and publishes.
 
 ```sh
-npm version patch --workspace quick-build   # bump version + create a matching git tag (v0.1.1)
+npm version patch --workspace @agrimsigdel/quick-build   # bump version + create a matching git tag (v0.1.1)
 git push --follow-tags                       # push the tag → CI publishes to npm
 ```
 
