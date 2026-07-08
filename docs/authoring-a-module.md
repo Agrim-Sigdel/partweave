@@ -57,14 +57,34 @@ an anchor that doesn't exist — that's your signal to add it to `_core`.
 
 ## 5. Test it
 
+**Every module must ship tests** — they're copied into generated projects and run by CI
+(`.github/workflows/ci.yml`), which is what stops a broken module from ever being published.
+Put tests next to the code, per target:
+
+| Target | Runner | Where the test file goes |
+| --- | --- | --- |
+| server | pytest (`pytest-django`) | `modules/<id>/server/**/tests/test_*.py` |
+| web | Vitest | `modules/<id>/web/**/*.test.ts(x)` |
+| mobile | jest-expo | `modules/<id>/mobile/**/*.test.ts(x)` |
+
+The runners themselves live in the `_core` scaffolds (`_core/web/vitest.config.mts`,
+`_core/mobile/jest.config.js`), so any app you generate can already run `pnpm test`. Web/mobile
+tests default to a fast `node` environment; component tests opt into a DOM with a
+`// @vitest-environment jsdom` (web) or `/** @jest-environment node|jsdom */` (mobile) docblock.
+See `modules/auth/*/src/auth/client.test.ts` for the pattern (mock `@/lib/*`, stub `fetch`).
+
+Run the exact checks CI runs against a generated project:
+
 ```sh
 pnpm --filter @agrimsigdel/quick-build build
-node packages/cli/dist/index.js create t --dir /tmp/t --server --with notifications --force
-cd /tmp/t/apps/server && uv sync && uv run pytest -q
+node packages/cli/dist/index.js create t --dir /tmp/t --server --web --mobile --with notifications --force
+cd /tmp/t && pnpm install
+pnpm -r typecheck && pnpm -r test                       # web + mobile
+cd apps/server && uv sync && uv run pytest -q            # server (set DATABASE_URL for a real DB)
 ```
 
-Ship a test under `modules/notifications/server/tests/` — it's copied alongside the app and
-runs with the rest of the suite. Also confirm `quick-build add notifications` works on an existing
+Prefer a **regression test that fails without your fix**: assert the wrong behavior is gone, not
+just that the happy path works. Also confirm `quick-build add notifications` works on an existing
 project (the same composer powers both, so idempotent anchor injection is all you need).
 
 ## Recipes by feature type
