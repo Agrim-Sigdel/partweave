@@ -1,4 +1,4 @@
-# quick-build — a modular full-stack scaffolder
+# partweave — a modular full-stack scaffolder
 
 Generate new projects that contain **only the parts you pick** — a Django server, a
 Next.js web app, an Expo mobile app, and cross-cutting components (auth, storage, docker,
@@ -11,37 +11,37 @@ built on clean, swappable interfaces).
 
 **Run it directly — no install** (always the latest published version):
 ```sh
-npx @agrimsigdel/quick-build create        # interactive picker
+npx partweave create        # interactive picker
 ```
 
 **Or install the command globally:**
 ```sh
-npm install -g @agrimsigdel/quick-build
-quick-build create            # or use the short alias: qb create
+npm install -g partweave
+partweave create            # or use the short alias: weave create
 ```
 > Requires Node ≥ 20. Updates are automatic with `npx`; for the global install run
-> `npm update -g @agrimsigdel/quick-build`.
+> `npm update -g partweave`.
 
 <details>
 <summary>Install from source (contributors)</summary>
 
 ```sh
-git clone git@github.com:Agrim-Sigdel/quick-build.git ~/.quick-build && cd ~/.quick-build
-./bin/quick-build create        # the launcher builds itself on first run
+git clone git@github.com:Agrim-Sigdel/partweave.git ~/.partweave && cd ~/.partweave
+./bin/partweave create        # the launcher builds itself on first run
 ```
-Or the one-line installer (clones to `~/.quick-build`, builds, drops a `quick-build` /
-`qb` command into `~/.local/bin`):
+Or the one-line installer (clones to `~/.partweave`, builds, drops a `partweave` /
+`weave` command into `~/.local/bin`):
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Agrim-Sigdel/quick-build/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Agrim-Sigdel/partweave/main/scripts/install.sh | bash
 ```
 </details>
 
 ### Use it
 ```sh
-quick-build create                                                    # interactive picker
-quick-build create my-app --dir ~/apps/my-app --server --mobile --with auth,docker   # scriptable
-quick-build create my-app --server --web --js-pm npm --py-pm pip       # use npm + pip instead of pnpm + uv
-cd ~/apps/my-app && quick-build add storage                           # add a component later
+partweave create                                                    # interactive picker
+partweave create my-app --dir ~/apps/my-app --server --mobile --with auth,docker   # scriptable
+partweave create my-app --server --web --js-pm npm --py-pm pip       # use npm + pip instead of pnpm + uv
+cd ~/apps/my-app && partweave add storage                           # add a component later
 ```
 
 > **No pnpm or uv?** The generator defaults to whichever managers are installed and falls back to
@@ -82,7 +82,7 @@ Two pieces:
 - **`modules/`** — the catalog. `_core/` holds the bare, feature-less scaffolds (with wiring
   anchors); every other folder is a component described by a `module.json` manifest.
 - **`packages/cli/`** — the composer. It resolves your selection, copies only the needed files,
-  and injects wiring at deterministic `# <quick-build:...>` anchors (idempotent, so `add` works too).
+  and injects wiring at deterministic `# <partweave:...>` anchors (idempotent, so `add` works too).
 
 The output is a self-contained monorepo where each app can be developed and deployed on its own.
 
@@ -106,21 +106,21 @@ components worth adding, and [authoring-a-module.md](docs/authoring-a-module.md)
 ## Development
 
 ```sh
-pnpm --filter @agrimsigdel/quick-build build      # build the CLI
-pnpm --filter @agrimsigdel/quick-build typecheck  # typecheck the engine
+pnpm --filter partweave build      # build the CLI
+pnpm --filter partweave typecheck  # typecheck the engine
 ```
 
 The generator locates the catalog by walking up from the CLI to find `modules/`.
-Override with `QUICK_BUILD_MODULES_DIR=/path/to/modules`.
+Override with `PARTWEAVE_MODULES_DIR=/path/to/modules`.
 
 ## Releasing
 
-The CLI is published to npm as [`@agrimsigdel/quick-build`](https://www.npmjs.com/package/@agrimsigdel/quick-build).
+The CLI is published to npm as [`partweave`](https://www.npmjs.com/package/partweave).
 Publishing is automated by [`.github/workflows/publish.yml`](.github/workflows/publish.yml):
 push a version tag and CI builds, bundles `modules/`, and publishes.
 
 ```sh
-npm version patch --workspace @agrimsigdel/quick-build   # bump version + create a matching git tag (v0.1.1)
+npm version patch --workspace partweave   # bump version + create a matching git tag (v0.1.1)
 git push --follow-tags                       # push the tag → CI publishes to npm
 ```
 

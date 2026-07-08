@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { jsPmProfile, pyPmProfile } from "./pm.js";
 import type { Module, RenderContext } from "./types.js";
 
@@ -80,7 +81,8 @@ export function buildMakefile(ctx: RenderContext, hasDocker: boolean): string {
         "db-up",
         [
           '@docker info >/dev/null 2>&1 || { echo "Docker isn\'t running — start Docker Desktop and wait for it to be ready, then retry."; exit 1; }',
-          "docker compose -f infra/docker-compose.yml up -d db",
+          // Load the project's .env (if present) so POSTGRES_* there drive the container.
+          "docker compose $$([ -f .env ] && echo --env-file .env) -f infra/docker-compose.yml up -d db",
         ],
         "start Postgres (needs Docker running)",
       );
@@ -173,13 +175,27 @@ export function buildNpmrc(ctx: RenderContext): string | null {
 }
 
 export function buildBaseEnv(ctx: RenderContext): string {
-  const lines: string[] = ["# Environment for " + ctx.projectName, ""];
+  const lines: string[] = [
+    "# Environment for " + ctx.projectName,
+    "#",
+    "# Every value the app reads from the environment lives here. Copy this file to",
+    "# `.env` and adjust as needed — the server, web/mobile apps, and each component",
+    "# read their configuration from it, so there's nothing to configure elsewhere.",
+    "",
+  ];
   if (ctx.hasServer) {
     lines.push(
       "# --- server ---",
-      "DJANGO_SECRET_KEY=dev-insecure-change-me",
+      "# Unique per-project key generated at scaffold time; signs sessions and JWTs.",
+      "# Use a separate secret value in production (and never commit the real one).",
+      `DJANGO_SECRET_KEY=${randomBytes(48).toString("base64url")}`,
       "DJANGO_DEBUG=true",
       "DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1",
+      "# Web origins allowed to call the API when DEBUG is off (comma-separated).",
+      "# In DEBUG every origin is allowed, so this is only needed in production.",
+      "# DJANGO_CORS_ALLOWED_ORIGINS=https://app.example.com",
+      "# DATABASE_URL — the server uses local SQLite by default; set a database URL",
+      "# to switch (the `db-postgres` component sets a Postgres DSN here for you).",
       "",
     );
   }
@@ -301,7 +317,7 @@ export function buildReadme(
 ): string {
   const parts: string[] = [];
   parts.push(`# ${ctx.projectName}`, "", ctx.description, "");
-  parts.push("Generated with **quick-build** — a modular full-stack scaffolder.", "");
+  parts.push("Generated with **partweave** — a modular full-stack scaffolder.", "");
 
   parts.push("## What's inside", "");
   if (ctx.hasServer) parts.push(`- \`apps/server\` — Django + DRF API (managed by \`${ctx.pyPm}\`)`);
@@ -375,7 +391,7 @@ CMD ["uv", "run", "gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000
 /**
  * Helper script for the pip path: installs the server's dependencies from
  * pyproject.toml into ./.venv. Re-runnable — used by `make bootstrap`, CI, the
- * production Docker build (`--no-dev`), and after `quick-build add`. Returns
+ * production Docker build (`--no-dev`), and after `partweave add`. Returns
  * null when the project uses uv (which reads pyproject natively).
  */
 export function buildPipSyncScript(ctx: RenderContext): string | null {

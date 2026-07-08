@@ -1,7 +1,7 @@
 """
 Django settings for {{projectName}}.
 
-Feature modules extend this file only at the `# <quick-build:...>` anchors below, so
+Feature modules extend this file only at the `# <partweave:...>` anchors below, so
 the base scaffold stays clean and re-generation is deterministic.
 """
 from pathlib import Path
@@ -15,10 +15,21 @@ env = environ.Env(DJANGO_DEBUG=(bool, True))
 environ.Env.read_env(BASE_DIR / ".env")
 environ.Env.read_env(BASE_DIR.parent.parent / ".env")
 
-# Dev-only default; override with DJANGO_SECRET_KEY in production. Kept ≥32 bytes
-# so JWT's HS256 signing doesn't warn about a short HMAC key (RFC 7518 §3.2).
-SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-dev-key-change-me-in-production")
 DEBUG = env.bool("DJANGO_DEBUG", default=True)
+
+# SECRET_KEY signs sessions and (with the `auth` component) JWTs. The scaffolder
+# writes a unique, random key into this project's .env at creation time, so no
+# two projects — and nothing public — ever share a signing key. There is
+# deliberately no shared production default: outside DEBUG a missing key raises
+# ImproperlyConfigured rather than falling back to a globally-known value an
+# attacker could use to forge tokens.
+if DEBUG:
+    SECRET_KEY = env(
+        "DJANGO_SECRET_KEY",
+        default="django-insecure-dev-only-do-not-use-in-production",
+    )
+else:
+    SECRET_KEY = env("DJANGO_SECRET_KEY")
 # In DEBUG, allow any host so a phone/simulator can reach the dev server over the
 # LAN. In production set DJANGO_DEBUG=false and provide DJANGO_ALLOWED_HOSTS.
 ALLOWED_HOSTS = env.list(
@@ -36,7 +47,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "corsheaders",
-    # <quick-build:installed-apps>
+    # <partweave:installed-apps>
 ]
 
 MIDDLEWARE = [
@@ -95,7 +106,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        # <quick-build:drf-auth>
+        # <partweave:drf-auth>
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
@@ -108,7 +119,9 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
-# Allow all origins in DEBUG so local web/mobile clients can call the API.
+# Allow all origins in DEBUG so local web/mobile clients can call the API. In
+# production (DEBUG off) list the exact web origins allowed, via the environment.
 CORS_ALLOW_ALL_ORIGINS = DEBUG
+CORS_ALLOWED_ORIGINS = env.list("DJANGO_CORS_ALLOWED_ORIGINS", default=[])
 
-# <quick-build:settings>
+# <partweave:settings>

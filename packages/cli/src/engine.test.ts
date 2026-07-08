@@ -9,13 +9,13 @@ import { Registry } from "./registry.js";
 import { resolveModules, validateApps } from "./resolve.js";
 
 describe("injectAtAnchor", () => {
-  const src = ["INSTALLED = [", "    # <quick-build:apps>", "]"].join("\n");
+  const src = ["INSTALLED = [", "    # <partweave:apps>", "]"].join("\n");
 
   it("inserts before the anchor with matching indent", () => {
     const { content, inserted } = injectAtAnchor(src, "apps", ['"accounts",']);
     expect(inserted).toBe(1);
     expect(content).toBe(
-      ['INSTALLED = [', '    "accounts",', "    # <quick-build:apps>", "]"].join("\n"),
+      ['INSTALLED = [', '    "accounts",', "    # <partweave:apps>", "]"].join("\n"),
     );
   });
 

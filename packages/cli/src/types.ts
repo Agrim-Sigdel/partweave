@@ -32,14 +32,14 @@ export type AppName = (typeof APPS)[number];
 
 /**
  * Named convenience wiring fields map to well-known anchors in the _core
- * scaffolds. `<quick-build:installed-apps>` etc. `anchors` is the generic escape hatch.
+ * scaffolds. `<partweave:installed-apps>` etc. `anchors` is the generic escape hatch.
  */
 const WiringForTargetSchema = z.object({
-  installedApps: z.array(z.string()).optional(), // server → <quick-build:installed-apps>
-  urls: z.array(z.string()).optional(), // server → <quick-build:urls>
-  settings: z.array(z.string()).optional(), // server → <quick-build:settings>
-  providers: z.array(z.string()).optional(), // web/mobile → <quick-build:providers>
-  routes: z.array(z.string()).optional(), // web/mobile → <quick-build:routes>
+  installedApps: z.array(z.string()).optional(), // server → <partweave:installed-apps>
+  urls: z.array(z.string()).optional(), // server → <partweave:urls>
+  settings: z.array(z.string()).optional(), // server → <partweave:settings>
+  providers: z.array(z.string()).optional(), // web/mobile → <partweave:providers>
+  routes: z.array(z.string()).optional(), // web/mobile → <partweave:routes>
   deps: z.array(z.string()).optional(), // merged into pyproject/package.json
   anchors: z.record(z.array(z.string())).optional(), // generic anchorId → lines
 });

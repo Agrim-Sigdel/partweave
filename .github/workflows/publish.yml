@@ -1,12 +1,12 @@
 name: Publish to npm
 
-# Publishes the `quick-build` CLI to npm on a version tag. Auth is via npm
+# Publishes the `partweave` CLI to npm on a version tag. Auth is via npm
 # Trusted Publishing (OIDC) — no NPM_TOKEN secret, and it's exempt from the
 # account's 2FA/OTP requirement. Configure the trusted publisher once at:
-#   npmjs.com -> @agrimsigdel/quick-build -> Settings -> Trusted Publisher
-#   (GitHub Actions, repo Agrim-Sigdel/quick-build, workflow file publish.yml).
+#   npmjs.com -> partweave -> Settings -> Trusted Publisher
+#   (GitHub Actions, repo Agrim-Sigdel/partweave, workflow file publish.yml).
 # Cut a release with (the --workspace bump does NOT tag, so tag explicitly):
-#   npm version patch --workspace @agrimsigdel/quick-build --no-git-tag-version
+#   npm version patch --workspace partweave --no-git-tag-version
 #   git commit -am "Release X.Y.Z" && git tag -a vX.Y.Z -m "X.Y.Z"
 #   git push origin main --follow-tags
 # The tag (vX.Y.Z) must match packages/cli/package.json version or the run fails fast.
@@ -53,7 +53,7 @@ jobs:
             echo "✗ tag v$TAG does not match package.json version $PKG" >&2
             exit 1
           fi
-          echo "▸ Publishing quick-build@$PKG"
+          echo "▸ Publishing partweave@$PKG"
 
       # Auth comes from OIDC (the id-token above) via the configured trusted
       # publisher — no token. `npm publish` runs prepack, which builds the CLI

@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 #
-# One-line installer for quick-build.
+# One-line installer for partweave.
 #
-#   curl -fsSL https://raw.githubusercontent.com/Agrim-Sigdel/quick-build/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Agrim-Sigdel/partweave/main/scripts/install.sh | bash
 #
-# Clones (or updates) quick-build into ~/.quick-build, builds the CLI, and drops
-# `quick-build` (and a short `qb` alias) into ~/.local/bin. Override with:
-#   QUICK_BUILD_REPO=<git url>  QUICK_BUILD_HOME=<dir>  QUICK_BUILD_BIN_DIR=<dir>
+# Clones (or updates) partweave into ~/.partweave, builds the CLI, and drops
+# `partweave` (and a short `weave` alias) into ~/.local/bin. Override with:
+#   PARTWEAVE_REPO=<git url>  PARTWEAVE_HOME=<dir>  PARTWEAVE_BIN_DIR=<dir>
 set -euo pipefail
 
-REPO="${QUICK_BUILD_REPO:-https://github.com/Agrim-Sigdel/quick-build.git}"
-HOME_DIR="${QUICK_BUILD_HOME:-$HOME/.quick-build}"
-BIN_DIR="${QUICK_BUILD_BIN_DIR:-$HOME/.local/bin}"
+REPO="${PARTWEAVE_REPO:-https://github.com/Agrim-Sigdel/partweave.git}"
+HOME_DIR="${PARTWEAVE_HOME:-$HOME/.partweave}"
+BIN_DIR="${PARTWEAVE_BIN_DIR:-$HOME/.local/bin}"
 
 say() { printf '\033[36m▸\033[0m %s\n' "$1"; }
 die() { printf '\033[31m✗ %s\033[0m\n' "$1" >&2; exit 1; }
@@ -31,27 +31,27 @@ else
 fi
 
 if [ -d "$HOME_DIR/.git" ]; then
-  say "Updating quick-build in $HOME_DIR"
+  say "Updating partweave in $HOME_DIR"
   git -C "$HOME_DIR" pull --ff-only
 else
-  say "Cloning quick-build into $HOME_DIR"
+  say "Cloning partweave into $HOME_DIR"
   git clone --depth 1 "$REPO" "$HOME_DIR"
 fi
 
 say "Installing dependencies and building the CLI with $PM"
 if [ "$PM" = pnpm ]; then
-  (cd "$HOME_DIR" && pnpm install && pnpm --filter @agrimsigdel/quick-build build)
+  (cd "$HOME_DIR" && pnpm install && pnpm --filter partweave build)
 else
-  (cd "$HOME_DIR" && npm install && npm run build -w @agrimsigdel/quick-build)
+  (cd "$HOME_DIR" && npm install && npm run build -w partweave)
 fi
 
 mkdir -p "$BIN_DIR"
-chmod +x "$HOME_DIR/bin/quick-build"
-ln -sf "$HOME_DIR/bin/quick-build" "$BIN_DIR/quick-build"
-ln -sf "$HOME_DIR/bin/quick-build" "$BIN_DIR/qb"
+chmod +x "$HOME_DIR/bin/partweave"
+ln -sf "$HOME_DIR/bin/partweave" "$BIN_DIR/partweave"
+ln -sf "$HOME_DIR/bin/partweave" "$BIN_DIR/weave"
 
 say "Installed."
 case ":$PATH:" in
-  *":$BIN_DIR:"*) echo "Run:  quick-build create   (or: qb create)" ;;
-  *) echo "Add $BIN_DIR to your PATH, then run:  quick-build create" ;;
+  *":$BIN_DIR:"*) echo "Run:  partweave create   (or: weave create)" ;;
+  *) echo "Add $BIN_DIR to your PATH, then run:  partweave create" ;;
 esac

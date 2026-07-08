@@ -6,8 +6,8 @@
 
 /** Build the regex that finds an anchor line for a given id. */
 function anchorRegex(anchorId: string): RegExp {
-  // matches any line containing `<quick-build:anchorId>` (comment syntax agnostic)
-  return new RegExp(`^([ \\t]*).*<quick-build:${escapeRe(anchorId)}>.*$`, "m");
+  // matches any line containing `<partweave:anchorId>` (comment syntax agnostic)
+  return new RegExp(`^([ \\t]*).*<partweave:${escapeRe(anchorId)}>.*$`, "m");
 }
 
 function escapeRe(s: string): string {
@@ -15,7 +15,7 @@ function escapeRe(s: string): string {
 }
 
 /**
- * Inserts `lines` immediately before the `<quick-build:anchorId>` line, matching its
+ * Inserts `lines` immediately before the `<partweave:anchorId>` line, matching its
  * indentation. Idempotent: a line already present (trimmed) is skipped.
  * Returns the new content and how many lines were actually inserted.
  */
@@ -28,7 +28,7 @@ export function injectAtAnchor(
   const re = anchorRegex(anchorId);
   const match = re.exec(content);
   if (!match) {
-    throw new Error(`Anchor <quick-build:${anchorId}> not found in target file`);
+    throw new Error(`Anchor <partweave:${anchorId}> not found in target file`);
   }
   const indent = match[1] ?? "";
   const existing = new Set(

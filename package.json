@@ -1,5 +1,5 @@
 {
-  "name": "quick-build-monorepo",
+  "name": "partweave-monorepo",
   "version": "0.1.0",
   "private": true,
   "description": "A modular full-stack scaffolding platform — pick the parts you need (Django server, Next.js web, Expo mobile) and generate only that code, wired together.",
@@ -12,13 +12,13 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "pnpm --filter @agrimsigdel/quick-build build",
-    "dev": "pnpm --filter @agrimsigdel/quick-build dev",
-    "cli": "pnpm --filter @agrimsigdel/quick-build exec quick-build",
-    "create": "pnpm --filter @agrimsigdel/quick-build exec create-quick-build",
-    "test": "pnpm --filter @agrimsigdel/quick-build test",
+    "build": "pnpm --filter partweave build",
+    "dev": "pnpm --filter partweave dev",
+    "cli": "pnpm --filter partweave exec partweave",
+    "create": "pnpm --filter partweave exec create-partweave",
+    "test": "pnpm --filter partweave test",
     "typecheck": "pnpm -r typecheck",
-    "release": "pnpm --filter @agrimsigdel/quick-build exec npm version"
+    "release": "pnpm --filter partweave exec npm version"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

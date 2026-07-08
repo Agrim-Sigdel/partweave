@@ -2,12 +2,12 @@ import { runCreate, type CreateFlags } from "./commands/create.js";
 import { Command } from "commander";
 
 /**
- * Dedicated `create-quick-build` binary: same as `quick-build create` but the create
+ * Dedicated `create-partweave` binary: same as `partweave create` but the create
  * command is the top-level program (npm-init style).
  */
 const program = new Command();
 program
-  .name("create-quick-build")
+  .name("create-partweave")
   .description("Scaffold a new full-stack project")
   .argument("[name]", "project name")
   .option("-d, --dir <path>", "target directory")

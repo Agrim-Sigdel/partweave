@@ -5,8 +5,8 @@ import type { JsPm, PyPm } from "./pm.js";
 import type { AppName } from "./types.js";
 
 /**
- * A small record written into every generated project (`.quick-build/manifest.json`)
- * so `quick-build add` knows what apps and components are already installed —
+ * A small record written into every generated project (`.partweave/manifest.json`)
+ * so `partweave add` knows what apps and components are already installed —
  * and which package managers the project uses, so later `add`s stay consistent.
  */
 export interface ProjectManifest {
@@ -19,7 +19,7 @@ export interface ProjectManifest {
   pyPm?: PyPm;
 }
 
-const REL = ".quick-build/manifest.json";
+const REL = ".partweave/manifest.json";
 
 export function readProjectManifest(dir: string): ProjectManifest | null {
   const p = join(dir, REL);

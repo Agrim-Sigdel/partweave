@@ -6,6 +6,6 @@
  * implementations stay swappable per platform.
  */
 
-// <quick-build:exports>
+// <partweave:exports>
 
 export {};

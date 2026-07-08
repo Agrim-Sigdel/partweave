@@ -34,18 +34,18 @@ const sel = (pm: ProjectManifest, dir: string, apps: AppName[]): Selection => ({
 });
 
 /**
- * `quick-build add <server|web|mobile|component...>` — grow an existing project.
+ * `partweave add <server|web|mobile|component...>` — grow an existing project.
  * Apps scaffold a new sub-project (and pull in the app-side of installed
  * components); components wire a new feature into the current apps.
  */
 export async function runAdd(ids: string[], flags: AddFlags): Promise<void> {
-  intro(pc.bgCyan(pc.black(" quick-build ")) + pc.dim(" add"));
+  intro(pc.bgCyan(pc.black(" partweave ")) + pc.dim(" add"));
   const dir = resolve(flags.dir ?? process.cwd());
 
   const pm = readProjectManifest(dir);
   if (!pm) {
     log.error(
-      `No quick-build project found at ${dir} (missing .quick-build/manifest.json). ` +
+      `No partweave project found at ${dir} (missing .partweave/manifest.json). ` +
         `Run this from inside a generated project, or pass --dir.`,
     );
     process.exit(1);
@@ -53,7 +53,7 @@ export async function runAdd(ids: string[], flags: AddFlags): Promise<void> {
   if (ids.length === 0) {
     log.error(
       "Specify what to add — an app (`server`/`web`/`mobile`) or a component " +
-        "(e.g. `quick-build add storage`).",
+        "(e.g. `partweave add storage`).",
     );
     process.exit(1);
   }

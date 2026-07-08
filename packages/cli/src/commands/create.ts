@@ -67,7 +67,7 @@ function defaultModules(registry: Registry, apps: AppName[]): string[] {
 }
 
 export async function runCreate(flags: CreateFlags): Promise<void> {
-  intro(pc.bgCyan(pc.black(" quick-build ")) + pc.dim(" full-stack scaffolder"));
+  intro(pc.bgCyan(pc.black(" partweave ")) + pc.dim(" full-stack scaffolder"));
   const registry = new Registry();
 
   const flagApps = appsFromFlags(flags);

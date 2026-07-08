@@ -1,6 +1,6 @@
 # What you can create
 
-`quick-build` generates a monorepo containing **only the parts you select**. This page covers every
+`partweave` generates a monorepo containing **only the parts you select**. This page covers every
 app and component available today, the CLI, and common project shapes.
 
 ## The command
@@ -34,7 +34,7 @@ selects the **default** components that apply to your chosen apps.
 You don't need `pnpm` or `uv` — the generator adapts to what you pick (or what's installed). It
 defaults to **pnpm** and **uv** when they're on your `PATH`, otherwise falls back to **npm** and
 **pip** (both ship with Node / Python). Override either explicitly with `--js-pm` / `--py-pm`, or
-choose them in the interactive prompt. The choice is recorded in `.quick-build/manifest.json`, so
+choose them in the interactive prompt. The choice is recorded in `.partweave/manifest.json`, so
 later `add`s stay consistent. Everything the generator emits — the `Makefile`, workspace layout,
 CI, and the server `Dockerfile` — speaks the manager you chose. (The `pip` path uses a `.venv` and
 a small `apps/server/scripts/sync_deps.py` helper as the counterpart to `uv sync`.)
@@ -98,7 +98,7 @@ make gen-api                   # regenerate the typed client (if api-client pres
 ```
 
 Copy `.env.example` → `.env` and fill in values first. Each project also records what it
-contains in `.quick-build/manifest.json`, which powers `add` (below).
+contains in `.partweave/manifest.json`, which powers `add` (below).
 
 ## Growing a project later
 
@@ -107,13 +107,13 @@ component** — the manifest tracks what's installed, so this is safe and idempo
 
 ```sh
 # add a component (feature) — wires it into your current apps
-quick-build add storage
-quick-build add auth              # pulls in db-postgres automatically
+partweave add storage
+partweave add auth              # pulls in db-postgres automatically
 
 # add a whole app later — e.g. you started backend-only and now want a web frontend
-quick-build add web
-quick-build add mobile
-quick-build add server            # add a backend to a web/mobile-only project
+partweave add web
+partweave add mobile
+partweave add server            # add a backend to a web/mobile-only project
 ```
 
 Adding an app is smart: it scaffolds the new app (plus derived packages like `shared` /
@@ -122,5 +122,5 @@ Adding an app is smart: it scaffolds the new app (plus derived packages like `sh
 the provider — no manual glue. It then updates the workspace (`pnpm-workspace.yaml` or
 `package.json`), the `Makefile`, and `.env.example` for the new app.
 
-After an `add`, `quick-build` prints the exact sync commands for your project's package
+After an `add`, `partweave` prints the exact sync commands for your project's package
 managers (e.g. `pnpm install` / `npm install` for JS apps, and the uv/pip sync for the server).

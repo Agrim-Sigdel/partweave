@@ -62,7 +62,7 @@ export interface PyPmProfile {
   /**
    * Commands (already `&&`-joined) to create/refresh the server's environment
    * from pyproject.toml, run *inside* apps/server. Used by `make bootstrap`,
-   * CI, and `quick-build add`.
+   * CI, and `partweave add`.
    */
   syncInServer: string;
   /** run a console command (e.g. "python manage.py migrate") inside the server env */

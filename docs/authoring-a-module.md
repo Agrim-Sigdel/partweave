@@ -44,8 +44,8 @@ concrete class — so a new backend is just a new file + a settings value.
 
 ## 3. Wire in at anchors
 
-Add lines to existing `<quick-build:...>` anchors via `wiring`. If you need a brand-new anchor, add
-the comment to the relevant `_core` scaffold (e.g. `# <quick-build:my-anchor>` in `settings.py`) and
+Add lines to existing `<partweave:...>` anchors via `wiring`. If you need a brand-new anchor, add
+the comment to the relevant `_core` scaffold (e.g. `# <partweave:my-anchor>` in `settings.py`) and
 reference it from `wiring.<target>.anchors`. The generator errors loudly if a module references
 an anchor that doesn't exist — that's your signal to add it to `_core`.
 
@@ -76,7 +76,7 @@ See `modules/auth/*/src/auth/client.test.ts` for the pattern (mock `@/lib/*`, st
 Run the exact checks CI runs against a generated project:
 
 ```sh
-pnpm --filter @agrimsigdel/quick-build build
+pnpm --filter partweave build
 node packages/cli/dist/index.js create t --dir /tmp/t --server --web --mobile --with notifications --force
 cd /tmp/t && pnpm install
 pnpm -r typecheck && pnpm -r test                       # web + mobile
@@ -84,7 +84,7 @@ cd apps/server && uv sync && uv run pytest -q            # server (set DATABASE_
 ```
 
 Prefer a **regression test that fails without your fix**: assert the wrong behavior is gone, not
-just that the happy path works. Also confirm `quick-build add notifications` works on an existing
+just that the happy path works. Also confirm `partweave add notifications` works on an existing
 project (the same composer powers both, so idempotent anchor injection is all you need).
 
 ## Recipes by feature type
