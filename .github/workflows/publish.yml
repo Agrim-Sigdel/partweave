@@ -1,9 +1,15 @@
 name: Publish to npm
 
-# Publishes the `quick-build` CLI to npm whenever you push a version tag, e.g.:
-#   npm version patch --workspace @agrimsigdel/quick-build   # bumps version + creates a git tag
-#   git push --follow-tags
-# The tag (v0.2.0) must match the package.json version, or the run fails fast.
+# Publishes the `quick-build` CLI to npm on a version tag. Auth is via npm
+# Trusted Publishing (OIDC) — no NPM_TOKEN secret, and it's exempt from the
+# account's 2FA/OTP requirement. Configure the trusted publisher once at:
+#   npmjs.com -> @agrimsigdel/quick-build -> Settings -> Trusted Publisher
+#   (GitHub Actions, repo Agrim-Sigdel/quick-build, workflow file publish.yml).
+# Cut a release with (the --workspace bump does NOT tag, so tag explicitly):
+#   npm version patch --workspace @agrimsigdel/quick-build --no-git-tag-version
+#   git commit -am "Release X.Y.Z" && git tag -a vX.Y.Z -m "X.Y.Z"
+#   git push origin main --follow-tags
+# The tag (vX.Y.Z) must match packages/cli/package.json version or the run fails fast.
 on:
   push:
     tags:
@@ -20,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # enables npm provenance
+      id-token: write # required for OIDC trusted publishing (and provenance)
     steps:
       - uses: actions/checkout@v4
 
@@ -31,6 +37,10 @@ jobs:
           node-version: 20
           registry-url: "https://registry.npmjs.org"
           cache: pnpm
+
+      # The runner's bundled npm (10.x) predates OIDC trusted publishing; needs >= 11.5.1.
+      - name: Upgrade npm for trusted publishing
+        run: npm install -g npm@latest
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -45,10 +55,9 @@ jobs:
           fi
           echo "▸ Publishing quick-build@$PKG"
 
-      # `npm publish` runs the package's `prepack` script, which builds the CLI
-      # and bundles modules/ + README + LICENSE into the tarball.
+      # Auth comes from OIDC (the id-token above) via the configured trusted
+      # publisher — no token. `npm publish` runs prepack, which builds the CLI
+      # and bundles modules/ + README + LICENSE; provenance is added automatically.
       - name: Publish
-        run: npm publish --provenance --access public
+        run: npm publish --access public
         working-directory: packages/cli
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
