@@ -15,7 +15,9 @@ env = environ.Env(DJANGO_DEBUG=(bool, True))
 environ.Env.read_env(BASE_DIR / ".env")
 environ.Env.read_env(BASE_DIR.parent.parent / ".env")
 
-SECRET_KEY = env("DJANGO_SECRET_KEY", default="dev-insecure-change-me")
+# Dev-only default; override with DJANGO_SECRET_KEY in production. Kept ≥32 bytes
+# so JWT's HS256 signing doesn't warn about a short HMAC key (RFC 7518 §3.2).
+SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-dev-key-change-me-in-production")
 DEBUG = env.bool("DJANGO_DEBUG", default=True)
 # In DEBUG, allow any host so a phone/simulator can reach the dev server over the
 # LAN. In production set DJANGO_DEBUG=false and provide DJANGO_ALLOWED_HOSTS.
