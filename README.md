@@ -17,7 +17,7 @@ npx @agrimsigdel/quick-build create        # interactive picker
 **Or install the command globally:**
 ```sh
 npm install -g @agrimsigdel/quick-build
-quick-build create            # or the short alias: qb create
+quick-build create            # or use the short alias: qb create
 ```
 > Requires Node ≥ 20. Updates are automatic with `npx`; for the global install run
 > `npm update -g @agrimsigdel/quick-build`.
