@@ -1,11 +1,13 @@
 import { fileURLToPath } from "node:url";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 // Runs `*.test.ts(x)` files that modules ship alongside their source. `@/…`
 // resolves to ./src (same as the tsconfig path). Default env is node (fast, and
-// `fetch`/`Response` are native); component tests can opt into jsdom with a
+// `fetch`/`Response` are native); component tests opt into a DOM with a
 // `// @vitest-environment jsdom` docblock at the top of the file.
 export default defineConfig({
+  plugins: [react()],
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
