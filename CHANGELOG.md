@@ -8,6 +8,15 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+## [0.3.3] — 2026-07-09
+
+### Changed
+- **CLI banner refresh.** The wordmark now renders in faux-3D — a woven `█`/`▓` gradient front
+  face with a gray extruded side for depth — beside a dim "loom" of interlacing warp/weft
+  threads (replacing 0.3.2's flat weave). Same graceful fallbacks: truecolor → basic two-tone
+  → plain (the 3D + weave still read by shape) → a one-line fallback on narrow terminals /
+  non-TTY.
+
 ## [0.3.2] — 2026-07-09
 
 ### Added
@@ -95,7 +104,8 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 - Initial published release (under the former `quick-build` name).
 
-[Unreleased]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Agrim-Sigdel/partweave/compare/v0.2.0...v0.3.0

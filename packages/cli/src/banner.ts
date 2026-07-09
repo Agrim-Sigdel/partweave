@@ -1,22 +1,18 @@
 import pc from "picocolors";
 
 /**
- * The "partweave" wordmark: a small pixel banner whose glyphs are filled with a
- * two-tone weave (a █/▓ basket-weave checkerboard — a nod to the name) under a
- * violet→magenta→red gradient. Built entirely from strings (no deps) and degrades
- * on purpose so it "works on anything":
- *   - truecolor terminal  → smooth 24-bit gradient over the weave
- *   - basic color         → a magenta→red two-tone weave
- *   - NO_COLOR             → the weave texture alone (still legible & woven)
+ * The "partweave" wordmark: a small pixel banner rendered in faux-3D — each glyph
+ * has a woven gradient front face and a gray extruded side, so it reads as raised
+ * blocks — beside a dim loom of interlacing warp/weft threads (the name, drawn).
+ * Built entirely from strings (no deps) and degrades on purpose so it "works on
+ * anything":
+ *   - truecolor terminal  → 24-bit gradient front + gray 3D side + dim threads
+ *   - basic color         → magenta→red front, gray side, dim threads
+ *   - NO_COLOR             → plain blocks; the 3D side + weave still read by shape
  *   - narrow / no TTY      → a one-line `partweave` fallback
- * The weave chars are Block Elements (U+2580–U+259F), the same range as █, so
- * they render wherever the solid block would.
+ * Glyphs use Block Elements + Box Drawing (both classic Unicode ranges), so they
+ * render wherever a solid block would.
  */
-
-// Basket-weave fill: a █/▓ checkerboard keeps every cell filled (so letters stay
-// crisp) while the alternating shades read as interlaced threads.
-const WEAVE = ["█", "▓"] as const;
-const weaveCell = (row: number, col: number): string => WEAVE[(row + col) % 2];
 
 // 5-row glyphs. Every row of a glyph is the same width so columns line up when
 // letters are joined with a single-space gutter.
@@ -29,6 +25,13 @@ const GLYPHS: Record<string, string[]> = {
   e: ["████", "█   ", "███ ", "█   ", "████"],
   v: ["█   █", "█   █", "█   █", " █ █ ", "  █  "],
 };
+
+// Woven front face: a █/▓ checkerboard reads as interlaced threads.
+const weaveCell = (row: number, col: number): string => ((row + col) % 2 ? "▓" : "█");
+
+// Threads on a loom: warp (│) and weft (━) interlacing over-under — a plain weave,
+// the literal picture of the name. Every row is the same width.
+const LOOM = ["┃━┃━", "━┃━┃", "┃━┃━", "━┃━┃", "┃━┃━"];
 
 const WORD = "partweave";
 const HEIGHT = 5;
@@ -64,7 +67,8 @@ function gradient(t: number): [number, number, number] {
   ];
 }
 
-function paint(ch: string, t: number, mode: Mode): string {
+/** Paint the front (lit) face of a glyph cell in the gradient. */
+function paintFace(ch: string, t: number, mode: Mode): string {
   if (ch === " ") return " ";
   if (mode === "none") return ch;
   if (mode === "basic") return t < 0.5 ? pc.magentaBright(ch) : pc.redBright(ch);
@@ -72,39 +76,62 @@ function paint(ch: string, t: number, mode: Mode): string {
   return `\x1b[38;2;${r};${g};${b}m${ch}\x1b[39m`;
 }
 
-/** One-line fallback for narrow terminals / no TTY. */
-function compact(mode: Mode): string {
-  return "  " + (mode === "none" ? "partweave" : word2tone("partweave", mode));
+/** Paint the extruded side face — a neutral gray shadow that gives the 3D depth. */
+function paintShadow(ch: string, mode: Mode): string {
+  if (ch === " ") return " ";
+  if (mode === "none") return ch;
+  if (mode === "basic") return pc.gray(ch);
+  return `\x1b[38;2;110;110;110m${ch}\x1b[39m`;
+}
+
+/** Paint a loom thread: dim so the wordmark stays the hero. */
+function paintThread(ch: string, mode: Mode): string {
+  if (ch === " ") return " ";
+  if (mode === "none") return ch;
+  if (mode === "basic") return pc.dim(ch);
+  return `\x1b[38;2;120;110;140m${ch}\x1b[39m`;
 }
 
 function word2tone(word: string, mode: Mode): string {
   if (mode === "none") return word;
   return [...word]
-    .map((ch, i) => paint(ch, word.length > 1 ? i / (word.length - 1) : 0, mode))
+    .map((ch, i) => paintFace(ch, word.length > 1 ? i / (word.length - 1) : 0, mode))
     .join("");
+}
+
+/** One-line fallback for narrow terminals / no TTY. */
+function compact(mode: Mode): string {
+  return "  " + (mode === "none" ? "partweave" : word2tone("partweave", mode));
 }
 
 export function renderBanner(): string {
   const mode = colorMode();
-  // No TTY (piped, CI logs): keep it to a single line, not a 5-row block.
+  // No TTY (piped, CI logs): keep it to a single line, not a multi-row block.
   if (!process.stdout.isTTY) return compact(mode);
-  const cols = process.stdout.columns ?? 80;
 
-  // Assemble each row by concatenating the glyphs with a single-space gutter.
+  // Assemble each glyph row with a single-space gutter between letters.
   const rows: string[] = [];
   for (let r = 0; r < HEIGHT; r++) {
     rows.push([...WORD].map((ch) => GLYPHS[ch]?.[r] ?? "").join(" "));
   }
-  const width = rows[0].length;
-  if (width + 2 > cols) return compact(mode);
+  const glyphW = rows[0].length;
+  const total = 2 + LOOM[0].length + 1 + (glyphW + 1); // indent + loom + gutter + wordmark(+side)
+  if (total > (process.stdout.columns ?? 80)) return compact(mode);
 
-  const painted = rows.map((row, r) =>
-    "  " +
-    [...row]
-      .map((ch, c) =>
-        ch === " " ? " " : paint(weaveCell(r, c), width > 1 ? c / (width - 1) : 0, mode),
-      )
-      .join(""),
-  );
-  return painted.join("\n");
+  const front = (r: number, c: number): boolean =>
+    r >= 0 && r < HEIGHT && c >= 0 && c < glyphW && rows[r][c] === "█";
+
+  const out: string[] = [];
+  for (let R = 0; R < HEIGHT; R++) {
+    const loom = [...LOOM[R]].map((ch) => paintThread(ch, mode)).join("");
+    let mark = "";
+    for (let C = 0; C <= glyphW; C++) {
+      const t = glyphW > 1 ? Math.min(C, glyphW - 1) / (glyphW - 1) : 0;
+      if (front(R, C)) mark += paintFace(weaveCell(R, C), t, mode); // woven gradient front
+      else if (front(R, C - 1)) mark += paintShadow("░", mode); // gray extruded side (depth)
+      else mark += " ";
+    }
+    out.push("  " + loom + " " + mark);
+  }
+  return out.join("\n");
 }
