@@ -1,5 +1,10 @@
 # partweave — a modular full-stack scaffolder
 
+[![npm version](https://img.shields.io/npm/v/partweave.svg)](https://www.npmjs.com/package/partweave)
+[![CI](https://github.com/Agrim-Sigdel/partweave/actions/workflows/ci.yml/badge.svg)](https://github.com/Agrim-Sigdel/partweave/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/node/v/partweave.svg)](https://www.npmjs.com/package/partweave)
+
 Generate new projects that contain **only the parts you pick** — a Django server, a
 Next.js web app, an Expo mobile app, and cross-cutting components (auth, storage, docker,
 CI) — all wired together.
@@ -113,6 +118,19 @@ pnpm --filter partweave typecheck  # typecheck the engine
 The generator locates the catalog by walking up from the CLI to find `modules/`.
 Override with `PARTWEAVE_MODULES_DIR=/path/to/modules`.
 
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full setup, project layout, the checks CI
+enforces, and how to add a component.
+
+## Contributing
+
+Contributions are welcome! The highest-leverage change is usually **a new component** — a
+folder under `modules/` with a `module.json`, no engine changes required.
+
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [module contract](docs/module-contract.md).
+- Be kind — this project follows a [Code of Conduct](CODE_OF_CONDUCT.md).
+- Found a security issue? See [SECURITY.md](SECURITY.md) — please report it privately.
+- Release notes live in [CHANGELOG.md](CHANGELOG.md).
+
 ## Releasing
 
 The CLI is published to npm as [`partweave`](https://www.npmjs.com/package/partweave).
@@ -124,6 +142,23 @@ npm version patch --workspace partweave   # bump version + create a matching git
 git push --follow-tags                       # push the tag → CI publishes to npm
 ```
 
-> One-time setup: add an `NPM_TOKEN` (an npm "Automation" access token) to the repo's
-> **Settings → Secrets and variables → Actions**. The `prepack` script copies `modules/` +
-> README + LICENSE into the package, so `npm publish` ships a self-contained CLI.
+> The `prepack` script copies `modules/`, README, LICENSE + NOTICE into the package, so
+> `npm publish` ships a self-contained CLI. Auth is via npm Trusted Publishing (OIDC) —
+> no `NPM_TOKEN` secret is needed (see [`publish.yml`](.github/workflows/publish.yml)).
+
+## Author
+
+Created and maintained by **Agrim Sigdel** — <sigdelagrim35@gmail.com>.
+
+If you build something with partweave, a mention or a link back is always appreciated.
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE) — permissive and free for commercial use.
+
+- **Projects you generate are yours.** partweave copies template code into your project; you
+  own that output and carry no obligation back to this repo.
+- **Attribution (Apache §4d):** redistributing partweave itself — or a fork of it — must keep
+  the [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE) files intact.
+- **Trademark (Apache §6):** the **partweave** name and branding are reserved. You may fork
+  and even sell the code, but not market a derivative under the "partweave" name.

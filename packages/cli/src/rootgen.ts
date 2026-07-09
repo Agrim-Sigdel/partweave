@@ -22,12 +22,25 @@ function jsMembers(ctx: RenderContext): string[] {
 /**
  * pnpm declares workspace members in pnpm-workspace.yaml. npm declares them in
  * package.json instead (see buildRootPackageJson), so this returns null for npm.
+ *
+ * A mobile project also pins a hoisted node_modules layout here (React Native /
+ * Expo choke on pnpm's default symlinked store). These live in the workspace
+ * file — not a root .npmrc — on purpose: pnpm 10.6+ reads them here, and keeping
+ * them out of .npmrc means running `npm run <task>` on a pnpm project doesn't spew
+ * "Unknown project config" warnings for pnpm-only keys.
  */
 export function buildJsWorkspace(ctx: RenderContext): string | null {
   if (!jsPmProfile(ctx.jsPm).usesWorkspaceYaml) return null;
   const members = jsMembers(ctx);
   if (members.length === 0) return null;
-  return "packages:\n" + members.map((m) => `  - "${m}"`).join("\n") + "\n";
+  let out = "packages:\n" + members.map((m) => `  - "${m}"`).join("\n") + "\n";
+  if (ctx.hasMobile && jsPmProfile(ctx.jsPm).needsHoisting) {
+    out +=
+      "\n# Expo / React Native need a flat node_modules layout.\n" +
+      "nodeLinker: hoisted\n" +
+      "shamefullyHoist: true\n";
+  }
+  return out;
 }
 
 export function buildRootPackageJson(
@@ -68,6 +81,35 @@ export function buildRootPackageJson(
   if (anyJs && !pm.usesWorkspaceYaml) pkg.workspaces = jsMembers(ctx);
   pkg.scripts = scripts;
   if (anyJs) pkg.devDependencies = { typescript: "^5.7.2" };
+
+  // Expo/React Native (glob@7, rimraf@3, inflight, uuid@7) and the jsdom-based
+  // test runners (abab, domexception, whatwg-encoding) drag in deprecated
+  // *transitive* deps that pnpm loudly summarizes on install. None are ours to
+  // upgrade — they carry no compatible newer version and resolve only when those
+  // frameworks update — so acknowledge the known-benign ones instead of alarming
+  // the user. Pinned to the observed majors so a genuinely *new* deprecation
+  // still surfaces. pnpm-only: npm has no equivalent (its warnings are inline).
+  if (anyJs && ctx.jsPm === "pnpm") {
+    const allowed: Record<string, string> = {};
+    if (ctx.hasMobile) {
+      Object.assign(allowed, {
+        abab: "2",
+        domexception: "4",
+        glob: "7",
+        inflight: "1",
+        rimraf: "3",
+        uuid: "7",
+      });
+    }
+    if (ctx.hasWeb || ctx.hasMobile) {
+      // web pulls jsdom@25 (whatwg-encoding@3); mobile's jest uses jsdom@20 (@2).
+      allowed["whatwg-encoding"] =
+        ctx.hasWeb && ctx.hasMobile ? "2 || 3" : ctx.hasWeb ? "3" : "2";
+    }
+    if (Object.keys(allowed).length > 0) {
+      pkg.pnpm = { allowedDeprecatedVersions: allowed };
+    }
+  }
   return JSON.stringify(pkg, null, 2) + "\n";
 }
 
@@ -336,22 +378,6 @@ export function buildTsconfigBase(ctx: RenderContext): string | null {
   );
 }
 
-/**
- * React Native / Expo behave badly with pnpm's symlinked store, so a mobile
- * project pins a hoisted node_modules layout. npm already installs flat, so it
- * needs no .npmrc.
- */
-export function buildNpmrc(ctx: RenderContext): string | null {
-  if (!ctx.hasMobile) return null;
-  if (!jsPmProfile(ctx.jsPm).needsHoistNpmrc) return null;
-  return [
-    "# Expo / React Native need a flat node_modules layout.",
-    "node-linker=hoisted",
-    "shamefully-hoist=true",
-    "",
-  ].join("\n");
-}
-
 export function buildBaseEnv(ctx: RenderContext): string {
   const lines: string[] = [
     "# Environment for " + ctx.projectName,
@@ -495,7 +521,11 @@ export function buildReadme(
 ): string {
   const parts: string[] = [];
   parts.push(`# ${ctx.projectName}`, "", ctx.description, "");
-  parts.push("Generated with **partweave** — a modular full-stack scaffolder.", "");
+  parts.push(
+    "Generated with [partweave](https://github.com/Agrim-Sigdel/partweave) — a modular " +
+      "full-stack scaffolder by Agrim Sigdel.",
+    "",
+  );
 
   parts.push("## What's inside", "");
   if (ctx.hasServer) parts.push(`- \`apps/server\` — Django + DRF API (managed by \`${ctx.pyPm}\`)`);

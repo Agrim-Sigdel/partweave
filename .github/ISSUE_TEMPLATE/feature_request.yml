@@ -1,0 +1,41 @@
+name: Feature or component request
+description: Propose a new app, component, or CLI capability.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check [`docs/feature-catalog.md`](https://github.com/Agrim-Sigdel/partweave/blob/main/docs/feature-catalog.md)
+        first — the feature may already be planned and prioritized.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: The use case or gap you're hitting. Focus on the "why" before the "what".
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: New component under `modules/`? A new app? A CLI flag? Sketch the shape.
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - New component (modules/)
+        - New app (_core)
+        - CLI capability
+        - Docs
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I'd be willing to help implement this (see CONTRIBUTING.md).

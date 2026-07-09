@@ -17,4 +17,20 @@ config.resolver.nodeModulesPaths = [
 // non-hoisted install) some Expo sub-deps (e.g. expo-asset) resolve from
 // expo/node_modules, and disabling the walk-up breaks bundling them.
 
+// Keep test files out of the native bundle. Expo Router builds a require.context
+// over the whole app/ directory, so a colocated `*.test.tsx` would otherwise get
+// bundled — dragging in @testing-library/react-native and Node built-ins
+// (console, util) that don't exist in the RN runtime, and failing the build.
+// Metro's blockList removes them from resolution (and thus from require.context);
+// Jest doesn't read this config, so `npm test` still finds and runs them.
+config.resolver.blockList = [
+  ...(Array.isArray(config.resolver.blockList)
+    ? config.resolver.blockList
+    : config.resolver.blockList
+      ? [config.resolver.blockList]
+      : []),
+  /\.(test|spec)\.[jt]sx?$/,
+  /[/\\]__tests__[/\\]/,
+];
+
 module.exports = config;

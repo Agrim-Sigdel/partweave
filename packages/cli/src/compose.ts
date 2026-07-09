@@ -14,7 +14,6 @@ import {
   buildBaseEnv,
   buildCiWorkflows,
   buildMakefile,
-  buildNpmrc,
   buildPipSyncScript,
   buildJsWorkspace,
   buildReadme,
@@ -219,8 +218,6 @@ function writeStructuralRootFiles(
   if (turbo) writeFileEnsured(join(outDir, "turbo.json"), turbo);
   const tsbase = buildTsconfigBase(ctx);
   if (tsbase) writeFileEnsured(join(outDir, "tsconfig.base.json"), tsbase);
-  const npmrc = buildNpmrc(ctx);
-  if (npmrc) writeFileEnsured(join(outDir, ".npmrc"), npmrc);
   // pip path: a helper that installs the server's deps from pyproject into .venv.
   const pipSync = buildPipSyncScript(ctx);
   if (pipSync) writeFileEnsured(join(outDir, "apps/server/scripts/sync_deps.py"), pipSync);

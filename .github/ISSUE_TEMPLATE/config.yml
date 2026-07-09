@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/Agrim-Sigdel/partweave/discussions
+    about: Ask a question, share an idea, or discuss usage — please don't use the issue tracker for support.
+  - name: Security vulnerability
+    url: https://github.com/Agrim-Sigdel/partweave/security/advisories/new
+    about: Report security issues privately. Do NOT open a public issue.

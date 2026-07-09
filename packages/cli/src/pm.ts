@@ -28,8 +28,8 @@ export interface JsPmProfile {
   packageManagerField: string | null;
   /** pnpm declares members in pnpm-workspace.yaml; npm uses "workspaces" in package.json */
   usesWorkspaceYaml: boolean;
-  /** pnpm's symlinked store breaks Expo, so a mobile project needs a hoisted .npmrc; npm is already flat */
-  needsHoistNpmrc: boolean;
+  /** pnpm's symlinked store breaks Expo, so a mobile project pins a hoisted node_modules layout (via pnpm-workspace.yaml); npm is already flat */
+  needsHoisting: boolean;
   /**
    * Version range used in package.json to depend on a sibling workspace package.
    * pnpm/yarn understand the `workspace:*` protocol; npm does not (it errors with
@@ -49,7 +49,7 @@ export function jsPmProfile(name: JsPm): JsPmProfile {
       runAll: (script) => `npm run ${script} --workspaces --if-present`,
       packageManagerField: null,
       usesWorkspaceYaml: false,
-      needsHoistNpmrc: false,
+      needsHoisting: false,
       workspaceRange: "*",
     };
   }
@@ -60,7 +60,7 @@ export function jsPmProfile(name: JsPm): JsPmProfile {
     runAll: (script) => `pnpm -r ${script}`,
     packageManagerField: PNPM_VERSION,
     usesWorkspaceYaml: true,
-    needsHoistNpmrc: true,
+    needsHoisting: true,
     workspaceRange: "workspace:*",
   };
 }

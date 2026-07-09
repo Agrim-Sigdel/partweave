@@ -1,0 +1,50 @@
+name: Bug report
+description: Something in the CLI or a generated project doesn't work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! partweave is a code generator, so the exact command you ran and
+        what the generated project did are the most useful things you can give us.
+  - type: input
+    id: version
+    attributes:
+      label: partweave version
+      description: Output of `partweave --version` (or `npx partweave --version`).
+      placeholder: "0.3.1"
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command you ran
+      description: The full `partweave create` / `add` invocation (include the flags/selections).
+      render: shell
+      placeholder: partweave create app --server --web --mobile --with auth,docker --yes
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected vs. what happened
+      description: Include the error output or the broken behavior in the generated project.
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Node version, package managers (pnpm/npm, uv/pip) and their versions.
+      placeholder: "macOS 15 · Node 24 · pnpm 10.20 · uv 0.5"
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I'm on the latest published version, or have noted why not.
+          required: true
+        - label: This is a bug in partweave itself (not a question — those go to Discussions).
+          required: true

@@ -1,13 +1,13 @@
 {
   "name": "partweave",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A modular full-stack scaffolder — pick the parts you need (Django server, Next.js web, Expo mobile) and generate only that code, wired together.",
   "type": "module",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "publishConfig": {
     "access": "public"
   },
-  "author": "Agrim Sigdel",
+  "author": "Agrim Sigdel <sigdelagrim35@gmail.com>",
   "homepage": "https://github.com/Agrim-Sigdel/partweave#readme",
   "repository": {
     "type": "git",
@@ -41,7 +41,8 @@
     "dist/**/*.js",
     "modules",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "build": "tsup",

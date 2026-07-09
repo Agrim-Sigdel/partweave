@@ -94,6 +94,26 @@ describe("buildRootPackageJson", () => {
   it("returns null when there's nothing to run", () => {
     expect(buildRootPackageJson(ctx({ apps: [] }), false)).toBeNull();
   });
+
+  it("silences known-benign deprecated transitive deps for pnpm projects", () => {
+    // Mobile drags in the Expo/RN + jsdom@20 chain; web only jsdom@25.
+    const both = JSON.parse(
+      buildRootPackageJson(ctx({ apps: ["web", "mobile"], jsPm: "pnpm" }), false)!,
+    );
+    const allow = both.pnpm.allowedDeprecatedVersions;
+    expect(allow).toMatchObject({ glob: "7", rimraf: "3", inflight: "1", uuid: "7" });
+    expect(allow["whatwg-encoding"]).toBe("2 || 3");
+
+    // web-only sees only whatwg-encoding@3, none of the Expo/RN packages.
+    const web = JSON.parse(buildRootPackageJson(ctx({ apps: ["web"], jsPm: "pnpm" }), false)!);
+    expect(web.pnpm.allowedDeprecatedVersions).toEqual({ "whatwg-encoding": "3" });
+
+    // npm has no such field; a server-only project has no JS deprecations at all.
+    expect(JSON.parse(buildRootPackageJson(ctx({ apps: ["web"], jsPm: "npm" }), false)!).pnpm)
+      .toBeUndefined();
+    expect(JSON.parse(buildRootPackageJson(ctx({ apps: ["server"] }), false)!).pnpm)
+      .toBeUndefined();
+  });
 });
 
 describe("package-manager install plans", () => {
