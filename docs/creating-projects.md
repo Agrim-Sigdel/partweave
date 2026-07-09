@@ -109,8 +109,11 @@ On macOS/Linux a `Makefile` is generated too, as a thin convenience wrapper — 
 `node scripts/run.mjs <task>` directly). `bootstrap` is self-healing: if the project's package
 manager is missing it enables pnpm via `corepack`, or points you at the uv installer.
 
-Copy `.env.example` → `.env` and fill in values first. Each project also records what it
-contains in `.partweave/manifest.json`, which powers `add` (below).
+Each app has its own env file, created for you (and gitignored) with a committed
+`.env.example` template alongside it — `apps/server/.env`, `apps/web/.env`,
+`apps/mobile/.env`, and a root `.env` for the database container. Edit the `.env` values
+before running; the server's is pre-filled with a generated secret key. Each project also
+records what it contains in `.partweave/manifest.json`, which powers `add` (below).
 
 ## Growing a project later
 
@@ -132,7 +135,7 @@ Adding an app is smart: it scaffolds the new app (plus derived packages like `sh
 `api-client`) **and brings in the app-side of every component you already have**. So
 `add web` to a `server + auth` project also drops in the login page, auth context, and wires
 the provider — no manual glue. It then updates the workspace (`pnpm-workspace.yaml` or
-`package.json`), the runner/`Makefile`, and `.env.example` for the new app.
+`package.json`), the runner/`Makefile`, and the new app's env files (`.env` + `.env.example`).
 
 After an `add`, `partweave` reminds you to run `npm run bootstrap` (and `npm run migrate` when the
 server changed) to sync the new dependencies.

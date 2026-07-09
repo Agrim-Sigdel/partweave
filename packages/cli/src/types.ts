@@ -70,7 +70,7 @@ export const ManifestSchema = z.object({
   conflicts: z.array(z.string()).default([]),
   /** capability/interface this module satisfies (for conflict grouping) */
   provides: z.string().optional(),
-  /** env keys → default value, appended to .env.example */
+  /** env keys → default value; routed to the consuming app's .env/.env.example by prefix (POSTGRES_→root, NEXT_PUBLIC_→web, EXPO_PUBLIC_→mobile, else server) */
   env: z.record(z.string()).default({}),
   /** per-target wiring (files are copied separately from wiring injection) */
   wiring: z.record(z.enum(TARGETS), WiringForTargetSchema).default({}),

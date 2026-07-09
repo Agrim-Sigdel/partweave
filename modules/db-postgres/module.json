@@ -16,7 +16,7 @@
     }
   },
   "notes": [
-    "PostgreSQL: set DATABASE_URL in .env (already added to .env.example).",
+    "PostgreSQL: DATABASE_URL lives in apps/server/.env (created for you, with a matching .env.example).",
     "Need a local database? Include the 'docker' component and run `make db-up`."
   ]
 }

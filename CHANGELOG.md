@@ -8,6 +8,30 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+## [0.3.2] — 2026-07-09
+
+### Added
+- **Per-app env files, created ready-to-run.** Each app now gets its own env pair in
+  the location its framework reads: `apps/server/.env` (Django), `apps/web/.env` (Next.js),
+  `apps/mobile/.env` (Expo), and a root `.env` for the database container (docker compose).
+  A committed `.env.example` sits beside each; the gitignored `.env` is generated for you so
+  the project runs without hand-copying files. The real `DJANGO_SECRET_KEY` lives only in
+  `.env`; `.env.example` carries a placeholder. Existing `.env` files are never overwritten.
+- **Git initialization.** `partweave create` can `git init` (branch `main`) and make an
+  initial commit — prompted interactively, or via `--git` / `--no-git`. Skipped when git
+  isn't installed or the target is already inside a repo. `.env` files are gitignored, so
+  secrets never land in the commit.
+
+### Changed
+- Component env keys now route to the app that consumes them, by prefix: `POSTGRES_*` → root
+  infra, `NEXT_PUBLIC_*` → web, `EXPO_PUBLIC_*` → mobile, everything else → server.
+
+### Fixed
+- The generated dev `.env` no longer pins `DJANGO_ALLOWED_HOSTS`, so with `DEBUG=true` the
+  server accepts any host and a phone/simulator can reach it over the LAN. Previously the
+  pinned `localhost,127.0.0.1` overrode Django's permissive DEBUG default, causing
+  `DisallowedHost` for LAN IPs.
+
 ## [0.3.1] — 2026-07-09
 
 ### Changed
@@ -57,7 +81,8 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 - Initial published release (under the former `quick-build` name).
 
-[Unreleased]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Agrim-Sigdel/partweave/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Agrim-Sigdel/partweave/releases/tag/v0.2.0

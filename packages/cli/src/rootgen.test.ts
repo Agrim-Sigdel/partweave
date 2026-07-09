@@ -2,11 +2,16 @@ import { describe, expect, it } from "vitest";
 import { buildContext } from "./compose.js";
 import { jsPmInstallPlan, pyPmInstallPlan } from "./pm.js";
 import {
+  buildEnvFiles,
   buildMakefile,
   buildRootPackageJson,
   buildTaskRunner,
 } from "./rootgen.js";
-import type { Selection } from "./types.js";
+import type { Module, Selection } from "./types.js";
+
+/** Minimal stand-in for a resolved Module carrying only env + title. */
+const mod = (title: string, env: Record<string, string>): Module =>
+  ({ manifest: { title, env } }) as unknown as Module;
 
 const ctx = (over: Partial<Selection>) =>
   buildContext({
@@ -113,6 +118,50 @@ describe("buildRootPackageJson", () => {
       .toBeUndefined();
     expect(JSON.parse(buildRootPackageJson(ctx({ apps: ["server"] }), false)!).pnpm)
       .toBeUndefined();
+  });
+});
+
+describe("buildEnvFiles (per-app env)", () => {
+  const find = (files: ReturnType<typeof buildEnvFiles>, dir: string) =>
+    files.find((f) => f.dir === dir);
+
+  it("emits a .env(.example) pair per app", () => {
+    const files = buildEnvFiles(ctx({ apps: ["server", "web", "mobile"] }), []);
+    expect(files.map((f) => f.dir).sort()).toEqual(["apps/mobile", "apps/server", "apps/web"]);
+  });
+
+  it("puts a real secret only in server .env; a placeholder in .env.example", () => {
+    const server = find(buildEnvFiles(ctx({ apps: ["server"] }), []), "apps/server")!;
+    expect(server.example).toContain("DJANGO_SECRET_KEY=replace-with-a-generated-secret");
+    expect(server.env).toMatch(/DJANGO_SECRET_KEY=[A-Za-z0-9_-]{20,}/);
+    expect(server.env).not.toContain("replace-with-a-generated-secret");
+  });
+
+  it("does not pin DJANGO_ALLOWED_HOSTS in dev (so DEBUG allows a phone on the LAN)", () => {
+    const server = find(buildEnvFiles(ctx({ apps: ["server"] }), []), "apps/server")!;
+    expect(server.env).not.toMatch(/^DJANGO_ALLOWED_HOSTS=/m);
+  });
+
+  it("routes component env keys to the app that reads them, by prefix", () => {
+    const files = buildEnvFiles(
+      ctx({ apps: ["server", "web", "mobile"] }),
+      [
+        mod("Docker", { POSTGRES_USER: "app", POSTGRES_PORT: "5432" }),
+        mod("DB", { DATABASE_URL: "postgres://app:app@localhost:5432/app" }),
+        mod("Analytics", { NEXT_PUBLIC_GA: "x", EXPO_PUBLIC_GA: "y" }),
+      ],
+    );
+    expect(find(files, "apps/server")!.env).toContain("DATABASE_URL=postgres://");
+    expect(find(files, "apps/web")!.env).toContain("NEXT_PUBLIC_GA=x");
+    expect(find(files, "apps/mobile")!.env).toContain("EXPO_PUBLIC_GA=y");
+    // POSTGRES_* go to a root infra file (docker compose reads it), not the server.
+    expect(find(files, "")!.env).toContain("POSTGRES_USER=app");
+    expect(find(files, "apps/server")!.env).not.toContain("POSTGRES_USER");
+  });
+
+  it("emits no root infra file without POSTGRES_* keys", () => {
+    const files = buildEnvFiles(ctx({ apps: ["server", "web"] }), []);
+    expect(find(files, "")).toBeUndefined();
   });
 });
 

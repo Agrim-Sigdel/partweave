@@ -7,6 +7,7 @@ import { buildContext, compose, selectedTargets } from "../compose.js";
 import {
   detectJsPm,
   detectPyPm,
+  hasCommand,
   JS_PMS,
   PY_PMS,
   type JsPm,
@@ -32,6 +33,36 @@ export interface CreateFlags {
   yes?: boolean;
   force?: boolean;
   install?: boolean; // run `bootstrap` after scaffolding (--install / --no-install)
+  git?: boolean; // initialize a git repo + initial commit (--git / --no-git)
+}
+
+/** True when `dir` already sits inside a git work tree (so we shouldn't nest a repo). */
+function isInsideGitRepo(dir: string): boolean {
+  return (
+    spawnSync("git", ["rev-parse", "--is-inside-work-tree"], { cwd: dir, stdio: "ignore" })
+      .status === 0
+  );
+}
+
+/**
+ * Initialize a git repo in `dir` and make the initial commit. `.env` files are
+ * gitignored, so real secrets never land in the commit. Returns false (and leaves
+ * the repo in place) if the commit couldn't be made — e.g. no git identity is set,
+ * in which case we fall back to a neutral author so the first commit still lands.
+ */
+function initGit(dir: string): boolean {
+  if (spawnSync("git", ["init", "-b", "main"], { cwd: dir, stdio: "ignore" }).status !== 0) {
+    // Older git without `-b`: init, then rename the default branch.
+    spawnSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+    spawnSync("git", ["branch", "-M", "main"], { cwd: dir, stdio: "ignore" });
+  }
+  spawnSync("git", ["add", "-A"], { cwd: dir, stdio: "ignore" });
+  const msg = "Initial commit (scaffolded with partweave)";
+  const opts = { cwd: dir, stdio: "ignore" as const };
+  if (spawnSync("git", ["commit", "-m", msg], opts).status === 0) return true;
+  // Retry with a neutral identity so a machine without user.name/email still commits.
+  const id = ["-c", "user.name=partweave", "-c", "user.email=partweave@users.noreply.github.com"];
+  return spawnSync("git", [...id, "commit", "-m", msg], opts).status === 0;
 }
 
 /** Validate a --js-pm/--py-pm flag, or fall back to what's installed. */
@@ -187,6 +218,31 @@ export async function runCreate(flags: CreateFlags): Promise<void> {
       log.warn("bootstrap didn't finish cleanly — run `npm run bootstrap` in the project to retry.");
       installed = false;
     }
+  }
+
+  // Initialize a git repo + initial commit. Off by default in non-interactive
+  // runs (matches --install); interactive runs are asked. Skipped when git is
+  // missing or the target already lives inside a repo.
+  let gitInitialized = false;
+  const gitAvailable = hasCommand("git");
+  const alreadyRepo = gitAvailable && isInsideGitRepo(choices.outDir);
+  let wantGit: boolean;
+  if (flags.git !== undefined) {
+    wantGit = flags.git;
+  } else if (nonInteractive) {
+    wantGit = false;
+  } else {
+    const ans = await confirm({ message: "Initialize a git repository?" });
+    wantGit = !isCancel(ans) && ans === true;
+  }
+  if (wantGit && gitAvailable && !alreadyRepo) {
+    gitInitialized = initGit(choices.outDir);
+    if (gitInitialized) log.success("Initialized a git repository (branch main, initial commit).");
+    else log.warn("Couldn't create the initial git commit — the repo was left uninitialized.");
+  } else if (wantGit && !gitAvailable) {
+    log.warn("git isn't installed — skipped repository initialization.");
+  } else if (wantGit && alreadyRepo) {
+    log.info("Target is already inside a git repository — skipped `git init`.");
   }
 
   const rel = basename(choices.outDir);

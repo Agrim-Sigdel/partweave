@@ -29,6 +29,8 @@ export function buildProgram(): Command {
     .option("-y, --yes", "skip prompts; use flags/defaults")
     .option("-f, --force", "write into a non-empty directory")
     .option("--install", "install dependencies after scaffolding (default: ask, off with --yes)")
+    .option("--git", "initialize a git repo + initial commit (default: ask, off with --yes)")
+    .option("--no-git", "skip git initialization")
     .action(async (name: string | undefined, opts: Record<string, unknown>) => {
       const flags: CreateFlags = { ...(opts as CreateFlags), name: name ?? (opts.name as string) };
       await runCreate(flags);

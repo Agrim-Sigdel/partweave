@@ -17,7 +17,7 @@ these manifests, resolves dependencies, copies the component's files, and inject
 | `conflicts` | `string[]` | `[]` | components that cannot coexist with this one |
 | `provides` | string | — | capability tag; two modules providing the same one conflict |
 | `default` | boolean | `false` | pre-checked in the interactive picker |
-| `env` | `Record<string,string>` | `{}` | env keys → default value, appended to `.env.example` |
+| `env` | `Record<string,string>` | `{}` | env keys → default value; routed to the consuming app's `.env`/`.env.example` by prefix (`POSTGRES_`→root, `NEXT_PUBLIC_`→web, `EXPO_PUBLIC_`→mobile, else server) |
 | `wiring` | `Record<TargetName, Wiring>` | `{}` | per-target injection (below) |
 | `notes` | `string[]` | `[]` | printed after generation |
 

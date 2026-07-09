@@ -14,6 +14,6 @@
   },
   "notes": [
     "Local DB: `make db-up` (docker compose). Server image: `docker build apps/server`.",
-    "Postgres creds/port come from .env (POSTGRES_USER/PASSWORD/DB/PORT); keep them in sync with DATABASE_URL."
+    "Postgres creds/port come from the root `.env` (POSTGRES_USER/PASSWORD/DB/PORT); keep them in sync with DATABASE_URL in apps/server/.env."
   ]
 }

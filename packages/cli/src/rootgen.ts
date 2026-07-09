@@ -378,45 +378,116 @@ export function buildTsconfigBase(ctx: RenderContext): string | null {
   );
 }
 
-export function buildBaseEnv(ctx: RenderContext): string {
-  const lines: string[] = [
-    "# Environment for " + ctx.projectName,
-    "#",
-    "# Every value the app reads from the environment lives here. Copy this file to",
-    "# `.env` and adjust as needed — the server, web/mobile apps, and each component",
-    "# read their configuration from it, so there's nothing to configure elsewhere.",
-    "",
-  ];
+/**
+ * Each app reads its **own** env file (the framework's native convention): Django
+ * reads `apps/server/.env`, Next.js reads `apps/web/.env`, Expo reads
+ * `apps/mobile/.env`, and docker compose reads the root `.env` for the database
+ * container. We emit a committed `.env.example` (placeholder secret) and a
+ * gitignored, ready-to-run `.env` (real generated secret) for each.
+ *
+ * A component's env keys route to the app that consumes them, by prefix:
+ * `POSTGRES_*` → root infra, `NEXT_PUBLIC_*` → web, `EXPO_PUBLIC_*` → mobile,
+ * everything else → server. Those prefixes are exactly the frameworks' own
+ * conventions, so the routing is self-describing.
+ */
+export interface EnvFile {
+  /** directory (relative to the project root) the pair is written into; "" is the root */
+  dir: string;
+  /** committed template with a placeholder secret */
+  example: string;
+  /** gitignored, ready-to-run file with the real generated secret */
+  env: string;
+}
+
+type EnvScope = "server" | "web" | "mobile" | "root";
+
+function envScopeFor(key: string): EnvScope {
+  if (key.startsWith("POSTGRES_")) return "root";
+  if (key.startsWith("NEXT_PUBLIC_")) return "web";
+  if (key.startsWith("EXPO_PUBLIC_")) return "mobile";
+  return "server";
+}
+
+export function buildEnvFiles(ctx: RenderContext, modules: Module[]): EnvFile[] {
+  // Component keys, grouped by the app that reads them (headed by module title).
+  const componentBlocks: Record<EnvScope, string[]> = { server: [], web: [], mobile: [], root: [] };
+  for (const m of modules) {
+    const byScope: Record<EnvScope, string[]> = { server: [], web: [], mobile: [], root: [] };
+    for (const [key, value] of Object.entries(m.manifest.env)) {
+      byScope[envScopeFor(key)].push(`${key}=${value}`);
+    }
+    for (const scope of ["server", "web", "mobile", "root"] as EnvScope[]) {
+      if (byScope[scope].length === 0) continue;
+      componentBlocks[scope].push(`# ${m.manifest.title}`, ...byScope[scope], "");
+    }
+  }
+
+  const render = (lines: string[]): string => lines.join("\n").replace(/\n*$/, "\n");
+  const files: EnvFile[] = [];
+
   if (ctx.hasServer) {
-    lines.push(
-      "# --- server ---",
-      "# Unique per-project key generated at scaffold time; signs sessions and JWTs.",
-      "# Use a separate secret value in production (and never commit the real one).",
-      `DJANGO_SECRET_KEY=${randomBytes(48).toString("base64url")}`,
-      "DJANGO_DEBUG=true",
-      "DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1",
-      "# Web origins allowed to call the API when DEBUG is off (comma-separated).",
-      "# In DEBUG every origin is allowed, so this is only needed in production.",
-      "# DJANGO_CORS_ALLOWED_ORIGINS=https://app.example.com",
-      "# DATABASE_URL — the server uses local SQLite by default; set a database URL",
-      "# to switch (the `db-postgres` component sets a Postgres DSN here for you).",
+    // Only the secret line differs between the committed example and the real file.
+    const serverBase = (secretLine: string): string[] => [
+      `# ${ctx.projectName} — server (Django). Read by apps/server.`,
+      "# `.env` is gitignored; keep real secrets here, not in `.env.example`.",
       "",
-    );
+      "# Unique per-project key; signs sessions and JWTs.",
+      secretLine,
+      "DJANGO_DEBUG=true",
+      "# Leave DJANGO_ALLOWED_HOSTS unset in dev: with DEBUG on, any host is allowed,",
+      "# so a phone/simulator can reach the server over your LAN (e.g. 192.168.x.y).",
+      "# Set it (comma-separated) in production, e.g. DJANGO_ALLOWED_HOSTS=api.example.com",
+      "# Origins allowed to call the API when DEBUG is off (comma-separated).",
+      "# DJANGO_CORS_ALLOWED_ORIGINS=https://app.example.com",
+      "# DATABASE_URL — unset uses local SQLite; the db-postgres component sets a Postgres DSN.",
+      "",
+    ];
+    files.push({
+      dir: "apps/server",
+      example: render([...serverBase("DJANGO_SECRET_KEY=replace-with-a-generated-secret"), ...componentBlocks.server]),
+      env: render([...serverBase(`DJANGO_SECRET_KEY=${randomBytes(48).toString("base64url")}`), ...componentBlocks.server]),
+    });
   }
+
   if (ctx.hasWeb) {
-    lines.push("# --- web ---", "NEXT_PUBLIC_API_URL=http://localhost:8000", "");
+    const web = [
+      `# ${ctx.projectName} — web (Next.js). Read by apps/web.`,
+      "# Only NEXT_PUBLIC_* is exposed to the browser.",
+      "NEXT_PUBLIC_API_URL=http://localhost:8000",
+      "",
+      ...componentBlocks.web,
+    ];
+    const body = render(web);
+    files.push({ dir: "apps/web", example: body, env: body });
   }
+
   if (ctx.hasMobile) {
-    lines.push(
-      "# --- mobile (Expo) ---",
-      "# In dev the app auto-detects your machine's LAN IP so a physical device can",
-      "# reach the server — leave this unset. Set it for simulators or production,",
-      "# in the environment or apps/mobile/.env (Expo reads EXPO_PUBLIC_* from there).",
+    const mobile = [
+      `# ${ctx.projectName} — mobile (Expo). Read by apps/mobile.`,
+      "# Only EXPO_PUBLIC_* is exposed to the app. In dev the app auto-detects your",
+      "# machine's LAN IP, so this can stay unset; set it for simulators/device/production.",
       "# EXPO_PUBLIC_API_URL=http://localhost:8000",
       "",
-    );
+      ...componentBlocks.mobile,
+    ];
+    const body = render(mobile);
+    files.push({ dir: "apps/mobile", example: body, env: body });
   }
-  return lines.join("\n");
+
+  // Root env exists only to feed the database container (docker compose reads it
+  // via `--env-file .env`); populated by the docker component's POSTGRES_* keys.
+  if (componentBlocks.root.length > 0) {
+    const root = [
+      `# ${ctx.projectName} — infrastructure. Read by docker compose (--env-file .env).`,
+      "# Keep these in sync with DATABASE_URL in apps/server/.env.",
+      "",
+      ...componentBlocks.root,
+    ];
+    const body = render(root);
+    files.push({ dir: "", example: body, env: body });
+  }
+
+  return files;
 }
 
 /**
@@ -559,7 +630,18 @@ export function buildReadme(
   if (ctx.hasMobile) parts.push("npm run mobile   # Expo dev server");
   parts.push("```", "");
 
-  parts.push("Copy `.env.example` to `.env` and fill in values before running.", "");
+  parts.push("## Configuration", "");
+  parts.push(
+    "Each app reads its **own** env file, created for you (and gitignored) with a",
+    "committed `.env.example` template alongside it. Edit the `.env` to change values:",
+    "",
+  );
+  const envFiles: string[] = [];
+  if (ctx.hasServer) envFiles.push("- `apps/server/.env` — Django secret key, allowed hosts, `DATABASE_URL`");
+  if (ctx.hasWeb) envFiles.push("- `apps/web/.env` — `NEXT_PUBLIC_*` (browser-exposed)");
+  if (ctx.hasMobile) envFiles.push("- `apps/mobile/.env` — `EXPO_PUBLIC_*` (app-exposed)");
+  if (hasDocker) envFiles.push("- `.env` (root) — `POSTGRES_*` for the database container");
+  parts.push(...envFiles, "");
   return parts.join("\n");
 }
 

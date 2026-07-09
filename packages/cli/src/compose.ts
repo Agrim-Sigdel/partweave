@@ -1,7 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  appendEnv,
   injectAtAnchor,
   mergePackageJsonDeps,
   normalizeWorkspaceDeps,
@@ -11,7 +10,7 @@ import { DEFAULT_JS_PM, DEFAULT_PY_PM, jsPmProfile } from "./pm.js";
 import type { Registry } from "./registry.js";
 import { isBinaryPath, slugify } from "./render.js";
 import {
-  buildBaseEnv,
+  buildEnvFiles,
   buildCiWorkflows,
   buildMakefile,
   buildPipSyncScript,
@@ -191,14 +190,24 @@ function applyWiring(
   }
 }
 
-function applyEnv(outDir: string, modules: Module[]): void {
-  const envPath = join(outDir, ".env.example");
-  let body = existsSync(envPath) ? readFileSync(envPath, "utf8") : "";
-  for (const mod of modules) {
-    if (Object.keys(mod.manifest.env).length === 0) continue;
-    body = appendEnv(body, mod.manifest.env, mod.manifest.title);
+/**
+ * Write each app's own env pair: a committed `.env.example` (regenerated each run)
+ * and a gitignored `.env` created only when absent — so re-running or `partweave
+ * add` never clobbers secrets or edits a user has made in `.env`.
+ */
+function writeEnvFiles(outDir: string, ctx: RenderContext, modules: Module[]): string[] {
+  const written: string[] = [];
+  for (const file of buildEnvFiles(ctx, modules)) {
+    const exampleRel = join(file.dir, ".env.example");
+    writeFileEnsured(join(outDir, exampleRel), file.example);
+    written.push(exampleRel);
+    const envRel = join(file.dir, ".env");
+    if (!existsSync(join(outDir, envRel))) {
+      writeFileEnsured(join(outDir, envRel), file.env);
+      written.push(envRel);
+    }
   }
-  if (body) writeFileSync(envPath, body);
+  return written;
 }
 
 /** Derived, selection-dependent monorepo shell files (safe to regenerate). */
@@ -225,7 +234,8 @@ function writeStructuralRootFiles(
   // the Makefile is a thin Unix wrapper around it.
   writeFileEnsured(join(outDir, "scripts/run.mjs"), buildTaskRunner(ctx, hasDocker));
   writeFileEnsured(join(outDir, "Makefile"), buildMakefile(ctx, hasDocker));
-  writeFileEnsured(join(outDir, ".env.example"), buildBaseEnv(ctx));
+  // Per-app env files are written in the env step (writeEnvFiles), which needs the
+  // resolved module list to route component keys.
 }
 
 export function compose(opts: ComposeOptions): ComposeResult {
@@ -244,7 +254,7 @@ export function compose(opts: ComposeOptions): ComposeResult {
     }
   }
 
-  // 2. computed root files (env is re-appended by applyEnv below, idempotently)
+  // 2. computed root files (per-app env files are written in step 5, below)
   if (rootFiles !== "none") writeStructuralRootFiles(outDir, ctx, modules);
   if (rootFiles === "all") {
     writeFileEnsured(join(outDir, "README.md"), buildReadme(ctx, modules));
@@ -264,8 +274,8 @@ export function compose(opts: ComposeOptions): ComposeResult {
   // 4. wiring (restricted to the targets being wired)
   applyWiring(outDir, wireTargets, modules, jsPmProfile(ctx.jsPm).workspaceRange);
 
-  // 5. env
-  applyEnv(outDir, modules);
+  // 5. env — one .env(.example) pair per app, only when root files are in scope
+  if (rootFiles !== "none") written.push(...writeEnvFiles(outDir, ctx, modules));
 
   // 6. CI workflows — the `ci` component is a codegen marker (no template
   // files); it emits per-app, path-filtered GitHub Actions for present apps.
