@@ -3,6 +3,7 @@ import {
   confirm,
   isCancel,
   multiselect,
+  note,
   select,
   text,
 } from "@clack/prompts";
@@ -129,9 +130,21 @@ export async function promptCreate(
     pyPm = pyRaw as PyPm;
   }
 
-  const ok = await confirm({
-    message: `Scaffold ${apps.join(" + ")}${modules.length ? " with " + modules.join(", ") : ""} into ${outDir}?`,
-  });
+  const row = (k: string, v: string) => `${pc.dim(k.padEnd(8))} ${v}`;
+  const tooling = [anyJs ? jsPm : null, apps.includes("server") ? pyPm : null]
+    .filter(Boolean)
+    .join(pc.dim(" · "));
+  note(
+    [
+      row("project", pc.bold(projectName)),
+      row("where", outDir),
+      row("apps", apps.join(pc.dim(" · "))),
+      row("add-ons", modules.length ? modules.join(pc.dim(" · ")) : pc.dim("none")),
+      row("tooling", tooling),
+    ].join("\n"),
+    "Review",
+  );
+  const ok = await confirm({ message: "Scaffold this?" });
   bail(ok);
   if (!ok) {
     cancel("Cancelled.");

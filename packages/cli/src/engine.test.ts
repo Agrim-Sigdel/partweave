@@ -1,13 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, describe, expect, it } from "vitest";
+import { buildContext, compose, selectedTargets } from "./compose.js";
 import {
   appendEnv,
+  higherVersion,
   injectAtAnchor,
   mergePackageJsonDeps,
   normalizeWorkspaceDeps,
   parseDep,
+  pyDepName,
 } from "./inject.js";
 import { Registry } from "./registry.js";
 import { resolveModules, validateApps } from "./resolve.js";
+import type { Selection } from "./types.js";
+
+const count = (s: string, re: RegExp) => (s.match(re) ?? []).length;
 
 describe("injectAtAnchor", () => {
   const src = ["INSTALLED = [", "    # <partweave:apps>", "]"].join("\n");
@@ -30,6 +39,24 @@ describe("injectAtAnchor", () => {
   it("throws on a missing anchor", () => {
     expect(() => injectAtAnchor(src, "nope", ["x"])).toThrow(/nope/);
   });
+
+  it("dedups within the anchor's block, not across the whole file", () => {
+    // The same line legitimately needed under two different anchors must be
+    // inserted at BOTH — the old whole-file dedup silently dropped the second.
+    const two = [
+      "A = [",
+      "    # <partweave:a>",
+      "]",
+      "",
+      "B = [",
+      "    # <partweave:b>",
+      "]",
+    ].join("\n");
+    const step1 = injectAtAnchor(two, "a", ['"x",']).content;
+    const step2 = injectAtAnchor(step1, "b", ['"x",']);
+    expect(step2.inserted).toBe(1);
+    expect(count(step2.content, /"x",/g)).toBe(2);
+  });
 });
 
 describe("dependency merging", () => {
@@ -41,11 +68,25 @@ describe("dependency merging", () => {
     expect(parseDep("next")).toEqual({ name: "next", version: "latest" });
   });
 
-  it("merges into package.json without clobbering existing", () => {
-    const pkg = JSON.stringify({ dependencies: { next: "^14" } });
-    const out = JSON.parse(mergePackageJsonDeps(pkg, ["next@^15", "react@^18"]));
-    expect(out.dependencies.next).toBe("^14"); // not overwritten
-    expect(out.dependencies.react).toBe("^18");
+  it("merges into package.json, keeping the higher version (semver-max)", () => {
+    const pkg = JSON.stringify({ dependencies: { next: "^14", react: "^19" } });
+    const out = JSON.parse(mergePackageJsonDeps(pkg, ["next@^15", "react@^18", "zod@^3"]));
+    expect(out.dependencies.next).toBe("^15"); // upgraded to the higher range
+    expect(out.dependencies.react).toBe("^19"); // a lower incoming range never downgrades
+    expect(out.dependencies.zod).toBe("^3"); // new dep added
+  });
+
+  it("semver-max: keeps the higher range, never downgrades, ignores unparseable", () => {
+    expect(higherVersion("^14", "^15")).toBe("^15");
+    expect(higherVersion("^19", "^18")).toBe("^19");
+    expect(higherVersion(">=3.2", ">=3.10")).toBe(">=3.10");
+    expect(higherVersion("workspace:*", "^1")).toBe("workspace:*"); // unparseable → keep existing
+  });
+
+  it("extracts base python distribution names (drops extras/specifiers)", () => {
+    expect(pyDepName('"psycopg[binary]>=3.2"')).toBe("psycopg");
+    expect(pyDepName("Django>=5.1")).toBe("django");
+    expect(pyDepName("boto3")).toBe("boto3");
   });
 
   it("rewrites the workspace protocol to the PM's range", () => {
@@ -85,5 +126,66 @@ describe("resolveModules", () => {
     const { modules } = resolveModules(registry, ["auth"]);
     expect(() => validateApps(registry, modules, ["web"])).toThrow(/server/);
     expect(() => validateApps(registry, modules, ["server"])).not.toThrow();
+  });
+
+  it("orders every module after its requires (deterministic topological order)", () => {
+    const { modules } = resolveModules(registry, ["example", "storage", "docker"]);
+    const pos = new Map(modules.map((m, i) => [m, i]));
+    for (const id of modules) {
+      for (const dep of registry.require(id).manifest.requires) {
+        expect(pos.get(dep)!, `${dep} must precede ${id}`).toBeLessThan(pos.get(id)!);
+      }
+    }
+  });
+
+  it("is order-independent: same input in any order yields the same result", () => {
+    const a = resolveModules(registry, ["example", "storage"]).modules;
+    const b = resolveModules(registry, ["storage", "example"]).modules;
+    expect(a).toEqual(b);
+  });
+});
+
+describe("create-then-add is idempotent (no double-wiring)", () => {
+  const registry = new Registry();
+  const dirs: string[] = [];
+  afterAll(() => dirs.forEach((d) => rmSync(d, { recursive: true, force: true })));
+
+  const sel = (dir: string, modules: string[]): Selection => ({
+    projectName: "e2e",
+    outDir: dir,
+    apps: ["server"],
+    modules,
+    jsPm: "pnpm",
+    pyPm: "uv",
+  });
+
+  it("adds a component to an existing project without duplicating prior wiring", () => {
+    const dir = mkdtempSync(join(tmpdir(), "pw-e2e-"));
+    dirs.push(dir);
+    const settings = join(dir, "apps/server/config/settings.py");
+    const pyproject = join(dir, "apps/server/pyproject.toml");
+
+    // 1. create: server + auth (auth pulls db-postgres transitively)
+    const create = sel(dir, resolveModules(registry, ["auth"]).modules);
+    const targets = selectedTargets(buildContext(create));
+    compose({ selection: create, registry, scaffoldTargets: targets, wireTargets: targets, rootFiles: "all" });
+    const afterCreate = readFileSync(settings, "utf8");
+    expect(count(afterCreate, /"accounts",/g)).toBe(1);
+    expect(afterCreate).not.toContain("STORAGE_BACKEND");
+
+    // 2. add storage (add-module mode: no re-scaffold, wire server, no root files)
+    const add = sel(dir, resolveModules(registry, ["auth", "storage"]).modules);
+    compose({ selection: add, registry, scaffoldTargets: new Set(), wireTargets: selectedTargets(buildContext(add)), rootFiles: "none" });
+    const afterAdd = readFileSync(settings, "utf8");
+    expect(count(afterAdd, /"accounts",/g)).toBe(1); // prior wiring not duplicated
+    expect(count(afterAdd, /STORAGE_BACKEND = env/g)).toBe(1); // new wiring applied once
+    // deps merged by name, once each
+    expect(count(readFileSync(pyproject, "utf8"), /djangorestframework-simplejwt/g)).toBe(1);
+    expect(count(readFileSync(pyproject, "utf8"), /boto3/g)).toBe(1);
+
+    // 3. re-run the same add: a no-op, byte-for-byte
+    const before = readFileSync(settings, "utf8");
+    compose({ selection: add, registry, scaffoldTargets: new Set(), wireTargets: selectedTargets(buildContext(add)), rootFiles: "none" });
+    expect(readFileSync(settings, "utf8")).toBe(before);
   });
 });

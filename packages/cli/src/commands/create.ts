@@ -3,6 +3,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { confirm, intro, isCancel, log, note, outro, spinner } from "@clack/prompts";
 import pc from "picocolors";
+import { renderBanner } from "../banner.js";
 import { buildContext, compose, selectedTargets } from "../compose.js";
 import {
   detectJsPm,
@@ -101,7 +102,8 @@ function defaultModules(registry: Registry, apps: AppName[]): string[] {
 }
 
 export async function runCreate(flags: CreateFlags): Promise<void> {
-  intro(pc.bgCyan(pc.black(" partweave ")) + pc.dim(" full-stack scaffolder"));
+  console.log("\n" + renderBanner());
+  intro(pc.dim("full-stack scaffolder — pick the parts, own the code"));
   const registry = new Registry();
 
   const flagApps = appsFromFlags(flags);

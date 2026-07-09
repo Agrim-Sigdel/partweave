@@ -61,12 +61,35 @@ export function resolveModules(
     }
   }
 
-  // stable order: sort by (number of deps, id) so deps precede dependents
-  const order = [...resolved].sort((a, b) => {
-    const da = registry.require(a).manifest.requires.length;
-    const db = registry.require(b).manifest.requires.length;
-    return da - db || a.localeCompare(b);
-  });
+  // Deterministic topological order (Kahn): every module comes after all of its
+  // resolved `requires`, ties broken by id so the output is stable regardless of
+  // the order the user listed things in. Order matters because injected lines
+  // (INSTALLED_APPS, middleware, providers) are emitted in module order — a
+  // dependency's app/middleware must land before its dependents'. Cycles are
+  // impossible here (the DFS above already threw on them).
+  const ids = [...resolved];
+  const deps = new Map<string, string[]>(
+    ids.map((id) => [id, registry.require(id).manifest.requires.filter((r) => resolved.has(r))]),
+  );
+  const indegree = new Map<string, number>(ids.map((id) => [id, deps.get(id)!.length]));
+  const dependents = new Map<string, string[]>(ids.map((id) => [id, []]));
+  for (const id of ids) for (const d of deps.get(id)!) dependents.get(d)!.push(id);
+
+  const byId = (a: string, b: string): number => a.localeCompare(b);
+  const ready = ids.filter((id) => indegree.get(id) === 0).sort(byId);
+  const order: string[] = [];
+  while (ready.length > 0) {
+    const id = ready.shift()!;
+    order.push(id);
+    for (const dep of dependents.get(id)!) {
+      const n = indegree.get(dep)! - 1;
+      indegree.set(dep, n);
+      if (n === 0) {
+        ready.push(dep);
+        ready.sort(byId);
+      }
+    }
+  }
 
   return { modules: order, autoAdded: [...autoAdded].sort() };
 }

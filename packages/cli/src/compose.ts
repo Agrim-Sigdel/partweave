@@ -4,6 +4,7 @@ import {
   injectAtAnchor,
   mergePackageJsonDeps,
   normalizeWorkspaceDeps,
+  pyDepName,
 } from "./inject.js";
 import { copyTree, listFiles, writeFileEnsured } from "./fsutil.js";
 import { DEFAULT_JS_PM, DEFAULT_PY_PM, jsPmProfile } from "./pm.js";
@@ -144,6 +145,39 @@ function injectIntoFiles(
   }
 }
 
+/**
+ * Merge Python runtime deps into pyproject's `<partweave:deps>` anchor, keyed by
+ * distribution name: a package already declared (in `[project].dependencies`,
+ * whether from _core or a previously-wired component) is skipped rather than
+ * appended a second time with a possibly-different version spec.
+ */
+function injectPyDeps(
+  index: Map<string, string[]>,
+  deps: string[],
+  targetLabel: string,
+): void {
+  const files = index.get("deps");
+  if (!files || files.length === 0) {
+    throw new Error(
+      `Wiring error: anchor <partweave:deps> not found in ${targetLabel}. ` +
+        `Add the anchor to the _core/${targetLabel} scaffold.`,
+    );
+  }
+  for (const file of files) {
+    const content = readFileSync(file, "utf8");
+    // Scope existing-name extraction to the [project].dependencies array so we
+    // don't pick up the project name, version, or dependency-group entries.
+    const region = content.match(/dependencies\s*=\s*\[([\s\S]*?)\]/)?.[1] ?? content;
+    const present = new Set(
+      [...region.matchAll(/["']([^"']+)["']/g)].map((m) => pyDepName(m[1])),
+    );
+    const fresh = deps.filter((d) => !present.has(pyDepName(d)));
+    if (fresh.length === 0) continue;
+    const { content: next } = injectAtAnchor(content, "deps", fresh.map((d) => `"${d}",`));
+    writeFileSync(file, next);
+  }
+}
+
 function applyWiring(
   outDir: string,
   targets: Set<TargetName>,
@@ -172,9 +206,11 @@ function applyWiring(
       // dependency merging
       if (wiring.deps?.length) {
         if (t === "server") {
-          // Python deps → inject into pyproject's <partweave:deps> anchor
-          const lines = wiring.deps.map((d) => `"${d}",`);
-          injectIntoFiles(index, "deps", lines, t);
+          // Python deps → inject into pyproject's <partweave:deps> anchor, keyed
+          // by distribution name so a package already present (from _core or
+          // another component) is never added a second time with a different
+          // version spec.
+          injectPyDeps(index, wiring.deps, t);
         } else {
           const pkgPath = join(targetDir, "package.json");
           if (existsSync(pkgPath)) {
