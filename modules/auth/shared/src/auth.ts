@@ -21,8 +21,14 @@ export interface AuthUser {
  * interface, never on a concrete store.
  */
 export interface TokenStore {
+  /** the current access token */
   get(): Promise<string | null>;
+  /** the current refresh token (used to mint a new access token) */
+  getRefresh(): Promise<string | null>;
+  /** persist a fresh access+refresh pair (after login/register) */
   set(tokens: AuthTokens): Promise<void>;
+  /** replace only the access token (after a silent refresh) */
+  setAccess(access: string): Promise<void>;
   clear(): Promise<void>;
 }
 
@@ -59,11 +65,37 @@ export interface AuthClient {
  * config + platform token store (see `auth-context`).
  */
 export function createAuthClient({ baseUrl, tokenStore }: AuthClientOptions): AuthClient {
+  // Exchange the stored refresh token for a new access token (F30). Returns true
+  // if a fresh access token was persisted. Never throws — a failed/absent refresh
+  // just means the caller's original 401 stands (and the user re-authenticates).
+  async function tryRefresh(): Promise<boolean> {
+    const refresh = await tokenStore.getRefresh();
+    if (!refresh) return false;
+    const res = await fetch(`${baseUrl}/api/auth/token/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh }),
+    });
+    if (!res.ok) return false;
+    const data = (await res.json()) as { access?: string };
+    if (!data.access) return false;
+    await tokenStore.setAccess(data.access);
+    return true;
+  }
+
   // `auth` defaults to true — the stored token is attached. Public endpoints
   // (register/login/refresh) MUST pass `auth: false`: sending a stale/expired
   // token to them makes the server's JWTAuthentication reject the request with a
   // 401 before it ever reaches the AllowAny permission.
-  async function req<T>(path: string, init: RequestInit & { auth?: boolean } = {}): Promise<T> {
+  //
+  // On a 401 for an authed request we transparently refresh the access token
+  // once and retry, so a short-lived access token doesn't log the user out while
+  // their refresh token is still valid. `allowRefresh` guards against a loop.
+  async function request<T>(
+    path: string,
+    init: RequestInit & { auth?: boolean },
+    allowRefresh: boolean,
+  ): Promise<T> {
     const { auth = true, headers, ...rest } = init;
     const token = auth ? await tokenStore.get() : null;
     const res = await fetch(`${baseUrl}${path}`, {
@@ -74,8 +106,15 @@ export function createAuthClient({ baseUrl, tokenStore }: AuthClientOptions): Au
         ...(headers ?? {}),
       },
     });
+    if (res.status === 401 && auth && allowRefresh && (await tryRefresh())) {
+      return request<T>(path, init, false); // retry once with the new access token
+    }
     if (!res.ok) throw new ApiError(res.status, await res.text());
     return (res.status === 204 ? null : await res.json()) as T;
+  }
+
+  function req<T>(path: string, init: RequestInit & { auth?: boolean } = {}): Promise<T> {
+    return request<T>(path, init, true);
   }
 
   async function login(creds: Credentials): Promise<void> {

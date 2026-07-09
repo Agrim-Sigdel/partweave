@@ -15,5 +15,7 @@ export default defineConfig({
     environment: "node",
     clearMocks: true,
     include: ["**/*.test.ts", "**/*.test.tsx"],
+    // A web app whose selected modules ship no tests shouldn't fail `pnpm test`.
+    passWithNoTests: true,
   },
 });

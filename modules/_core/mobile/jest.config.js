@@ -7,4 +7,6 @@ module.exports = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
   },
+  // A mobile app whose selected modules ship no tests shouldn't fail `pnpm test`.
+  passWithNoTests: true,
 };

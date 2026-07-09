@@ -119,6 +119,12 @@ function addApps(
   if (toAdd.length === 0) return pm;
 
   const newApps = [...pm.apps, ...toAdd];
+  // Re-resolve + validate the installed components against the enlarged app set
+  // (F32) — defends against a hand-edited manifest and gives the new target its
+  // modules dependency-complete and in topological order.
+  const resolved = resolveModules(registry, pm.modules);
+  validateApps(registry, resolved.modules, newApps);
+
   const oldTargets = selectedTargets(buildContext(sel(pm, dir, pm.apps)));
   const newTargets = selectedTargets(buildContext(sel(pm, dir, newApps)));
   const scaffold = new Set<TargetName>(
@@ -131,7 +137,7 @@ function addApps(
     // Wire ALL installed components into the new targets (e.g. adding `web` to a
     // server+auth project brings in auth's login page + provider).
     compose({
-      selection: { ...sel(pm, dir, newApps), modules: pm.modules },
+      selection: { ...sel(pm, dir, newApps), modules: resolved.modules },
       registry,
       scaffoldTargets: scaffold,
       wireTargets: scaffold,

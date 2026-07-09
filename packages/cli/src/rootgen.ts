@@ -532,6 +532,8 @@ function serverCiSteps(ctx: RenderContext): string {
 export function buildCiWorkflows(ctx: RenderContext): Record<string, string> {
   const js = jsPmProfile(ctx.jsPm);
   const out: Record<string, string> = {};
+  // Least-privilege GITHUB_TOKEN: these workflows only read the checkout (F34).
+  const permissions = "permissions:\n  contents: read\n";
   if (ctx.hasServer) {
     out[".github/workflows/server.yml"] = `name: server
 on:
@@ -539,7 +541,7 @@ on:
     paths: ["apps/server/**", ".github/workflows/server.yml"]
   pull_request:
     paths: ["apps/server/**", ".github/workflows/server.yml"]
-jobs:
+${permissions}jobs:
   test:
     runs-on: ubuntu-latest
     defaults:
@@ -557,7 +559,7 @@ on:
     paths: ["apps/web/**", "packages/**", ".github/workflows/web.yml"]
   pull_request:
     paths: ["apps/web/**", "packages/**", ".github/workflows/web.yml"]
-jobs:
+${permissions}jobs:
   build:
     runs-on: ubuntu-latest
     steps:
@@ -574,7 +576,7 @@ on:
     paths: ["apps/mobile/**", "packages/**", ".github/workflows/mobile.yml"]
   pull_request:
     paths: ["apps/mobile/**", "packages/**", ".github/workflows/mobile.yml"]
-jobs:
+${permissions}jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:

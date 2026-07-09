@@ -9,9 +9,15 @@ export const tokenStore: TokenStore = {
   async get() {
     return SecureStore.getItemAsync(ACCESS);
   },
+  async getRefresh() {
+    return SecureStore.getItemAsync(REFRESH);
+  },
   async set(tokens: AuthTokens) {
     await SecureStore.setItemAsync(ACCESS, tokens.access);
     await SecureStore.setItemAsync(REFRESH, tokens.refresh);
+  },
+  async setAccess(access: string) {
+    await SecureStore.setItemAsync(ACCESS, access);
   },
   async clear() {
     await SecureStore.deleteItemAsync(ACCESS);

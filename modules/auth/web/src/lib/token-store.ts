@@ -12,9 +12,17 @@ export const tokenStore: TokenStore = {
     if (typeof window === "undefined") return null;
     return window.localStorage.getItem(ACCESS);
   },
+  async getRefresh() {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(REFRESH);
+  },
   async set(tokens: AuthTokens) {
     window.localStorage.setItem(ACCESS, tokens.access);
     window.localStorage.setItem(REFRESH, tokens.refresh);
+  },
+  async setAccess(access: string) {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(ACCESS, access);
   },
   async clear() {
     window.localStorage.removeItem(ACCESS);

@@ -9,13 +9,28 @@ on:
   pull_request:
   workflow_call:
 
+permissions:
+  contents: read
+
 env:
   CLI: "partweave"
 
 jobs:
+  # A small matrix of app/module combinations — not just the one big combo — so
+  # single-app scaffolds and the passWithNoTests path are exercised too (F28).
   js:
-    name: typecheck + unit tests (full stack)
+    name: "js: ${{ matrix.combo }}"
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - combo: full (server+web+mobile)
+            flags: "--server --web --mobile --with auth,storage,example"
+          - combo: web-only
+            flags: "--web --no-server --no-mobile"
+          - combo: server+web+auth
+            flags: "--server --web --no-mobile --with auth"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -27,8 +42,8 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm --filter "$CLI" build
-      - name: Scaffold server + web + mobile with auth, storage, example
-        run: node packages/cli/dist/index.js create app --dir "$RUNNER_TEMP/app" --server --web --mobile --with auth,storage,example --yes
+      - name: Scaffold
+        run: node packages/cli/dist/index.js create app --dir "$RUNNER_TEMP/app" ${{ matrix.flags }} --yes
       - name: Install generated deps
         working-directory: ${{ runner.temp }}/app
         run: pnpm install
@@ -39,11 +54,16 @@ jobs:
         working-directory: ${{ runner.temp }}/app
         run: pnpm -r test
       - name: Web production build
+        if: contains(matrix.flags, '--web')
         working-directory: ${{ runner.temp }}/app
         run: pnpm --filter web build
+      - name: Mobile bundle (expo export)
+        if: contains(matrix.flags, '--mobile')
+        working-directory: ${{ runner.temp }}/app/apps/mobile
+        run: npx expo export --platform android --output-dir "$RUNNER_TEMP/expo-out"
 
   server:
-    name: server tests (pytest + postgres)
+    name: server tests (pytest + postgres, incl. storage)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -69,8 +89,9 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm --filter "$CLI" build
-      - name: Scaffold server + web with auth
-        run: node packages/cli/dist/index.js create app --dir "$RUNNER_TEMP/app" --server --web --no-mobile --with auth --yes
+      # Include storage so its pytest (test_storage.py) actually runs in CI (F28).
+      - name: Scaffold server + web with auth + storage
+        run: node packages/cli/dist/index.js create app --dir "$RUNNER_TEMP/app" --server --web --no-mobile --with auth,storage --yes
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -82,3 +103,24 @@ jobs:
         run: |
           uv sync
           uv run pytest -q
+
+  docker:
+    name: docker build (server image)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Build the generator
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter "$CLI" build
+      - name: Scaffold server with docker
+        run: node packages/cli/dist/index.js create app --dir "$RUNNER_TEMP/app" --server --no-web --no-mobile --with docker --yes
+      # The generated Dockerfile uses `COPY . .`, so the build context is apps/server.
+      - name: Build the server image
+        working-directory: ${{ runner.temp }}/app
+        run: docker build -t partweave-server-ci apps/server

@@ -60,7 +60,7 @@ cd ~/apps/my-app && partweave add storage                           # add a comp
 | App | Stack |
 | --- | --- |
 | `server` | Django 5 + DRF, managed by `uv` or `pip` (Python 3.12), SQLite by default |
-| `web` | Next.js 14 (App Router) + TypeScript + Tailwind |
+| `web` | Next.js 15 (App Router) + React 19 + TypeScript + Tailwind |
 | `mobile` | Expo (React Native) + Expo Router + TypeScript |
 
 Selecting a client app also brings `packages/shared` (TS interfaces) and, when a server is
@@ -138,8 +138,11 @@ Publishing is automated by [`.github/workflows/publish.yml`](.github/workflows/p
 push a version tag and CI builds, bundles `modules/`, and publishes.
 
 ```sh
-npm version patch --workspace partweave   # bump version + create a matching git tag (v0.1.1)
-git push --follow-tags                       # push the tag → CI publishes to npm
+# from repo root, working tree clean
+npm version patch --workspace partweave --no-git-tag-version   # bump packages/cli version only
+git commit -am "Release partweave X.Y.Z"
+git tag -a vX.Y.Z -m "partweave X.Y.Z"   # npm version --workspace does NOT tag — do it explicitly
+git push origin main --follow-tags        # pushes commit + tag → the publish workflow fires
 ```
 
 > The `prepack` script copies `modules/`, README, LICENSE + NOTICE into the package, so

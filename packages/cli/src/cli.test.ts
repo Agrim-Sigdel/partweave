@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, describe, expect, it } from "vitest";
 import { serializeCatalog } from "./catalog.js";
 import { EXIT_CODES, PartweaveError, toPartweaveError } from "./errors.js";
 import { ENVELOPE_VERSION, errEnvelope, okEnvelope } from "./output.js";
@@ -113,5 +116,56 @@ describe("--version single-sources from package.json (F36)", () => {
     const v = readVersion();
     expect(v).toMatch(/^\d+\.\d+\.\d+/);
     expect(v).not.toBe("0.1.0");
+  });
+});
+
+describe("resolver rejection paths (F26)", () => {
+  // The real catalog has no conflicting/cyclic modules, so drive the resolver
+  // with a synthetic fixtures registry built on disk.
+  const dir = mkdtempSync(join(tmpdir(), "pw-fixtures-"));
+  const mod = (m: Record<string, unknown>) => {
+    const d = join(dir, m.id as string);
+    mkdirSync(d, { recursive: true });
+    writeFileSync(join(d, "module.json"), JSON.stringify(m));
+  };
+  mod({ id: "cap-x", title: "X", targets: ["server"], provides: "cap" });
+  mod({ id: "cap-y", title: "Y", targets: ["server"], provides: "cap" });
+  mod({ id: "foe-a", title: "A", targets: ["server"], conflicts: ["foe-b"] });
+  mod({ id: "foe-b", title: "B", targets: ["server"] });
+  mod({ id: "cyc-1", title: "C1", targets: ["server"], requires: ["cyc-2"] });
+  mod({ id: "cyc-2", title: "C2", targets: ["server"], requires: ["cyc-1"] });
+  const registry = new Registry(dir);
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  it("rejects two modules that provide the same capability", () => {
+    try {
+      resolveModules(registry, ["cap-x", "cap-y"]);
+      expect.unreachable();
+    } catch (err) {
+      expect((err as PartweaveError).kind).toBe("conflict");
+      expect((err as PartweaveError).message).toMatch(/both provide "cap"/);
+      expect((err as PartweaveError).details?.provides).toBe("cap");
+    }
+  });
+
+  it("rejects an explicit conflicts pair", () => {
+    try {
+      resolveModules(registry, ["foe-a", "foe-b"]);
+      expect.unreachable();
+    } catch (err) {
+      expect((err as PartweaveError).kind).toBe("conflict");
+      expect((err as PartweaveError).message).toMatch(/conflict/i);
+    }
+  });
+
+  it("rejects a circular require chain", () => {
+    try {
+      resolveModules(registry, ["cyc-1"]);
+      expect.unreachable();
+    } catch (err) {
+      expect((err as PartweaveError).kind).toBe("conflict");
+      expect((err as PartweaveError).message).toMatch(/Circular/);
+      expect((err as PartweaveError).details?.cycle).toBeDefined();
+    }
   });
 });

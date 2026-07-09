@@ -40,6 +40,19 @@ describe("injectAtAnchor", () => {
     expect(() => injectAtAnchor(src, "nope", ["x"])).toThrow(/nope/);
   });
 
+  it("skips a line already present in the anchor's block (pre-existing, not just re-injected)", () => {
+    // A line the _core scaffold already ships must not be duplicated by wiring.
+    const withExisting = [
+      "INSTALLED = [",
+      '    "django.contrib.admin",',
+      "    # <partweave:apps>",
+      "]",
+    ].join("\n");
+    const { content, inserted } = injectAtAnchor(withExisting, "apps", ['"django.contrib.admin",']);
+    expect(inserted).toBe(0);
+    expect(content).toBe(withExisting);
+  });
+
   it("dedups within the anchor's block, not across the whole file", () => {
     // The same line legitimately needed under two different anchors must be
     // inserted at BOTH — the old whole-file dedup silently dropped the second.

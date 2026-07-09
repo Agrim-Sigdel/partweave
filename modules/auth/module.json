@@ -8,11 +8,23 @@
   "requires": ["db-postgres"],
   "provides": "auth",
   "default": true,
+  "env": {
+    "JWT_ACCESS_MINUTES": "15",
+    "JWT_REFRESH_DAYS": "7"
+  },
   "wiring": {
     "server": {
       "installedApps": ["\"accounts\","],
       "urls": ["path(\"api/auth/\", include(\"accounts.urls\")),"],
-      "settings": ["AUTH_USER_MODEL = \"accounts.User\""],
+      "settings": [
+        "AUTH_USER_MODEL = \"accounts.User\"",
+        "from datetime import timedelta",
+        "SIMPLE_JWT = {",
+        "    \"ACCESS_TOKEN_LIFETIME\": timedelta(minutes=env.int(\"JWT_ACCESS_MINUTES\", default=15)),",
+        "    \"REFRESH_TOKEN_LIFETIME\": timedelta(days=env.int(\"JWT_REFRESH_DAYS\", default=7)),",
+        "    \"ROTATE_REFRESH_TOKENS\": False,",
+        "}"
+      ],
       "deps": ["djangorestframework-simplejwt>=5.3"],
       "anchors": {
         "drf-auth": ["\"rest_framework_simplejwt.authentication.JWTAuthentication\","]

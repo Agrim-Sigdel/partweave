@@ -9,9 +9,12 @@ import { ApiError, createAuthClient, type TokenStore } from "@app/shared";
 // A leftover token is present for every test — the exact condition that produced
 // the register-401 bug.
 let storedToken: string | null = null;
+let storedRefresh: string | null = null;
 const tokenStore: TokenStore = {
   get: vi.fn(async () => storedToken),
+  getRefresh: vi.fn(async () => storedRefresh),
   set: vi.fn(async () => {}),
+  setAccess: vi.fn(async () => {}),
   clear: vi.fn(async () => {}),
 };
 const auth = createAuthClient({ baseUrl: "http://api.test", tokenStore });
@@ -35,6 +38,7 @@ describe("shared auth client (createAuthClient)", () => {
 
   beforeEach(() => {
     storedToken = "STALE.TOKEN";
+    storedRefresh = null; // refresh-specific tests opt in
     fetchMock = vi.fn(async () => jsonResponse({ access: "a", refresh: "r" }));
     vi.stubGlobal("fetch", fetchMock);
   });
@@ -72,5 +76,34 @@ describe("shared auth client (createAuthClient)", () => {
   it("logout clears the token store", async () => {
     await auth.logout();
     expect(tokenStore.clear).toHaveBeenCalled();
+  });
+
+  it("refreshes the access token once on a 401 and retries the request (F30)", async () => {
+    storedRefresh = "REFRESH.TOKEN";
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ detail: "expired" }, 401)) // /me → 401
+      .mockResolvedValueOnce(jsonResponse({ access: "NEW.ACCESS" })) // /token/refresh
+      .mockResolvedValueOnce(jsonResponse({ id: 1, email: "a@b.com" })); // /me retry
+    const me = await auth.fetchMe();
+    expect(me).toMatchObject({ id: 1, email: "a@b.com" });
+    expect(callTo(fetchMock, "/api/auth/token/refresh")).toBeTruthy();
+    expect(tokenStore.setAccess).toHaveBeenCalledWith("NEW.ACCESS");
+  });
+
+  it("does not attempt refresh when there is no refresh token (surfaces the 401)", async () => {
+    storedRefresh = null;
+    fetchMock.mockResolvedValueOnce(jsonResponse({ detail: "no" }, 401));
+    await expect(auth.fetchMe()).rejects.toMatchObject({ status: 401 });
+    expect(callTo(fetchMock, "/api/auth/token/refresh")).toBeFalsy();
+  });
+
+  it("surfaces the 401 (no infinite loop) when the refresh itself fails", async () => {
+    storedRefresh = "EXPIRED.REFRESH";
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ detail: "expired" }, 401)) // /me → 401
+      .mockResolvedValueOnce(jsonResponse({ detail: "invalid" }, 401)); // /token/refresh → 401
+    await expect(auth.fetchMe()).rejects.toMatchObject({ status: 401 });
+    // exactly one refresh attempt, then it gives up
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).endsWith("/api/auth/token/refresh"))).toHaveLength(1);
   });
 });

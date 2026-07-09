@@ -52,7 +52,9 @@ export function copyTree(
   for (const rel of listFiles(srcRoot)) {
     if (rel === "module.json") continue;
     const src = join(srcRoot, rel);
-    const destRel = rel.replace(/(^|\/)_gitignore$/, "$1.gitignore");
+    // Match both separators: listFiles returns OS-native paths, so a nested
+    // _gitignore is "sub\_gitignore" on Windows (F35).
+    const destRel = rel.replace(/(^|[/\\])_gitignore$/, "$1.gitignore");
     const dest = join(destRoot, destRel);
     ensureDir(dirname(dest));
     if (isBinaryPath(src)) {

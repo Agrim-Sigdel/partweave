@@ -77,7 +77,7 @@ Run the exact checks CI runs against a generated project:
 
 ```sh
 pnpm --filter partweave build
-node packages/cli/dist/index.js create t --dir /tmp/t --server --web --mobile --with notifications --force
+pnpm cli create t --dir /tmp/t --server --web --mobile --with auth,storage,ci --force
 cd /tmp/t && pnpm install
 pnpm -r typecheck && pnpm -r test                       # web + mobile
 cd apps/server && uv sync && uv run pytest -q            # server (set DATABASE_URL for a real DB)

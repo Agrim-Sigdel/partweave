@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { PartweaveError } from "./errors.js";
 import { writeFileEnsured } from "./fsutil.js";
 import type { JsPm, PyPm } from "./pm.js";
 import type { AppName } from "./types.js";
@@ -21,13 +22,33 @@ export interface ProjectManifest {
 
 const REL = ".partweave/manifest.json";
 
+/**
+ * Read a project's manifest. Returns `null` only when the file is genuinely
+ * **absent** (not a generated project); a file that exists but can't be read or
+ * parsed throws a clear error rather than masquerading as "no project" (F32), so
+ * a corrupt/hand-edited manifest isn't misreported as an un-scaffolded dir.
+ */
 export function readProjectManifest(dir: string): ProjectManifest | null {
   const p = join(dir, REL);
   if (!existsSync(p)) return null;
+  let raw: string;
   try {
-    return JSON.parse(readFileSync(p, "utf8")) as ProjectManifest;
+    raw = readFileSync(p, "utf8");
+  } catch (err) {
+    throw new PartweaveError(
+      "not-a-project",
+      `Couldn't read ${REL} at ${dir}: ${(err as Error).message}`,
+      { dir },
+    );
+  }
+  try {
+    return JSON.parse(raw) as ProjectManifest;
   } catch {
-    return null;
+    throw new PartweaveError(
+      "not-a-project",
+      `${REL} at ${dir} exists but isn't valid JSON (corrupt or hand-edited). Fix or remove it.`,
+      { dir, corrupt: true },
+    );
   }
 }
 

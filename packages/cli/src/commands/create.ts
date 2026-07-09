@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
-import { basename, resolve } from "node:path";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { confirm, intro, isCancel, log, note, outro, spinner } from "@clack/prompts";
 import pc from "picocolors";
 import { renderBanner } from "../banner.js";
@@ -196,11 +196,17 @@ async function createInner(flags: CreateFlags, json: boolean): Promise<void> {
 
   const s = json ? null : spinner();
   s?.start("Scaffolding");
+  // Scaffold into a sibling temp dir and atomically move it into place, so a
+  // mid-scaffold failure never leaves half-written debris in the target (F22).
+  // A same-filesystem sibling makes the rename atomic (no cross-device copy).
+  const parent = dirname(choices.outDir);
+  mkdirSync(parent, { recursive: true });
+  const tmp = mkdtempSync(join(parent, ".partweave-tmp-"));
   let result;
   try {
     const selection = {
       projectName: choices.projectName,
-      outDir: choices.outDir,
+      outDir: tmp,
       apps: choices.apps,
       modules: resolved.modules,
       jsPm: choices.jsPm,
@@ -214,19 +220,24 @@ async function createInner(flags: CreateFlags, json: boolean): Promise<void> {
       wireTargets: targets,
       rootFiles: "all",
     });
+    writeProjectManifest(tmp, {
+      name: choices.projectName,
+      apps: choices.apps,
+      modules: resolved.modules,
+      jsPm: choices.jsPm,
+      pyPm: choices.pyPm,
+    });
+    // Move into place. With --force we replace an existing target (F23 — no more
+    // merging onto a populated dir); the non-empty guard above already rejected a
+    // populated target when --force was absent.
+    if (existsSync(choices.outDir)) rmSync(choices.outDir, { recursive: true, force: true });
+    renameSync(tmp, choices.outDir);
   } catch (err) {
+    rmSync(tmp, { recursive: true, force: true });
     s?.stop("Failed");
     throw err;
   }
   s?.stop(`Created ${result.written.length} files`);
-
-  writeProjectManifest(choices.outDir, {
-    name: choices.projectName,
-    apps: choices.apps,
-    modules: resolved.modules,
-    jsPm: choices.jsPm,
-    pyPm: choices.pyPm,
-  });
 
   // Offer to install dependencies now (interactive) or on --install.
   let installed = false;

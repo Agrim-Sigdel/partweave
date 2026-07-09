@@ -7,10 +7,10 @@ app and component available today, the CLI, and common project shapes.
 
 ```sh
 # interactive — asks which apps + components you want
-node packages/cli/dist/index.js create
+npx partweave create        # or `partweave create` if installed globally; `weave` is an alias
 
 # non-interactive — driven entirely by flags
-node packages/cli/dist/index.js create <name> --dir <path> [app flags] [--with <ids>]
+partweave create <name> --dir <path> [app flags] [--with <ids>]
 ```
 
 | flag | meaning |
@@ -24,10 +24,44 @@ node packages/cli/dist/index.js create <name> --dir <path> [app flags] [--with <
 | `--js-pm <pm>` | JS/TS package manager: `pnpm` or `npm` (default: auto-detect) |
 | `--py-pm <pm>` | Python package manager (server): `uv` or `pip` (default: auto-detect) |
 | `-y, --yes` | skip prompts; use flags + defaults |
-| `-f, --force` | write into a non-empty directory |
+| `--non-interactive` | never prompt (also implied by a non-TTY stdout and by `--json`) |
+| `--json` | emit a machine-readable result envelope on stdout (implies `--non-interactive`) |
+| `-f, --force` | **replace** an existing target directory (clears it first) |
 
-If you pass any app flag (or `--yes`), it runs non-interactively. Omitting `--with` in that mode
-selects the **default** components that apply to your chosen apps.
+If you pass any app flag (or `--yes` / `--non-interactive` / `--json`), it runs non-interactively.
+Omitting `--with` in that mode selects the **default** components that apply to your chosen apps.
+A failed `create` leaves nothing behind — the project is assembled in a temp dir and moved into
+place only on success.
+
+## Driving it from an agent or script (`--json`)
+
+Every command takes `--json`: it prints exactly one versioned envelope on **stdout** (human output
+goes to stderr), so a script never has to scrape text.
+
+```sh
+partweave list --json     # the module catalog: ids, targets, requires, conflicts, provides, env
+partweave plan --with auth --server --json   # preview a selection — resolves + validates, writes nothing
+partweave create app --server --with auth --json
+```
+
+Envelope shape: `{ "ok": true, "v": 1, "command": "create", "data": {…} }` on success, or
+`{ "ok": false, "v": 1, "command": "…", "error": { "kind", "message", "exitCode", "details" } }` on
+failure. The exit code is stable, so an agent can branch on the outcome without parsing text:
+
+| exit | kind | meaning |
+| --- | --- | --- |
+| `0` | — | success |
+| `1` | `internal` | unexpected error |
+| `2` | `usage` | bad flag/argument |
+| `3` | `unknown-module` | an id that isn't in the catalog |
+| `4` | `conflict` | two modules conflict, share a capability, or form a require cycle |
+| `5` | `missing-app` | a component needs an app you didn't select |
+| `6` | `dir-exists` | target exists and is non-empty (use `--force`) |
+| `7` | `not-a-project` | `add`/`plan` outside a generated project (or a corrupt manifest) |
+
+`partweave plan` is the safe way to validate a selection before committing to a write — it reports
+the resolved (dependency-complete, topologically ordered) module list, the files that would be
+generated, and the env keys, without touching disk.
 
 ### Package managers
 
@@ -44,12 +78,17 @@ uv via its official installer) and otherwise falls back to npm/pip — so you ne
 project. Run **`partweave doctor`** any time to check your environment and install a missing
 manager. Pass `--install` to `create` to run the install step automatically after scaffolding.
 
+**Lockfiles.** Nothing in the generated `.gitignore` excludes lockfiles — commit them
+(`pnpm-lock.yaml` / `package-lock.json` and `uv.lock`) for reproducible installs. When you run
+`create --install --git`, install happens before the first commit, so the lockfiles are captured in
+it automatically; otherwise commit them after your first `install`.
+
 ## Apps
 
 | App | Folder | Stack | Runs with |
 | --- | --- | --- | --- |
 | Server | `apps/server` | Django 5 + DRF, `uv` or `pip` (Python 3.12), SQLite by default | `npm run server` |
-| Web | `apps/web` | Next.js 14 (App Router) + TypeScript + Tailwind | `npm run web` |
+| Web | `apps/web` | Next.js 15 (App Router) + React 19 + TypeScript + Tailwind | `npm run web` |
 | Mobile | `apps/mobile` | Expo (React Native) + Expo Router + TypeScript | `npm run mobile` |
 
 Derived automatically:

@@ -25,6 +25,25 @@ def test_register_login_me():
 
 
 @pytest.mark.django_db
+def test_refresh_returns_a_new_access_token():
+    """The refresh token can mint a new access token (what the client does on 401)."""
+    from django.test import Client
+
+    client = Client()
+    client.post("/api/auth/register", CREDS, content_type="application/json")
+    tokens = client.post("/api/auth/token", CREDS, content_type="application/json").json()
+
+    r = client.post(
+        "/api/auth/token/refresh",
+        {"refresh": tokens["refresh"]},
+        content_type="application/json",
+    )
+    assert r.status_code == 200, r.content
+    access = r.json()["access"]
+    assert client.get("/api/auth/me", HTTP_AUTHORIZATION=f"Bearer {access}").status_code == 200
+
+
+@pytest.mark.django_db
 def test_register_ignores_stale_token():
     """A leftover/invalid token in the client must not block registration.
 
