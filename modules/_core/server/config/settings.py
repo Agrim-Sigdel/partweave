@@ -10,12 +10,15 @@ import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-env = environ.Env(DJANGO_DEBUG=(bool, True))
+env = environ.Env(DJANGO_DEBUG=(bool, False))
 # Load env from the server dir first, then the monorepo root (if present).
 environ.Env.read_env(BASE_DIR / ".env")
 environ.Env.read_env(BASE_DIR.parent.parent / ".env")
 
-DEBUG = env.bool("DJANGO_DEBUG", default=True)
+# DEBUG defaults to False so a forgotten env var fails *closed* — a production
+# deploy that never set DJANGO_DEBUG serves safe error pages, not debug 500s that
+# would dump SECRET_KEY and the DB DSN. The generated dev .env sets DJANGO_DEBUG=true.
+DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
 # SECRET_KEY signs sessions and (with the `auth` component) JWTs. The scaffolder
 # writes a unique, random key into this project's .env at creation time, so no
@@ -108,8 +111,11 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         # <partweave:drf-auth>
     ],
+    # Secure by default: every DRF view requires authentication unless it opts out
+    # locally (e.g. auth's register/login set AllowAny; the schema/docs below do
+    # too). A new endpoint is private until you deliberately open it.
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
+        "rest_framework.permissions.IsAuthenticated",
     ],
 }
 
