@@ -2,8 +2,13 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import type { AuthUser, Credentials } from "@app/shared";
-import * as auth from "@/auth/client";
+import { ApiError, createAuthClient, type AuthUser, type Credentials } from "@app/shared";
+import { API_URL } from "@/lib/config";
+import { tokenStore } from "@/lib/token-store";
+
+// Compose the shared auth client with this app's config + token store. The HTTP
+// layer lives once in @app/shared; only the injected dependencies are local.
+const auth = createAuthClient({ baseUrl: API_URL, tokenStore });
 
 interface AuthState {
   user: AuthUser | null;
@@ -25,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       // A 401 means the stored token is stale/expired — clear it so it isn't
       // re-sent on later requests. Other errors (e.g. server down) keep it.
-      if (err instanceof auth.ApiError && err.status === 401) await auth.logout();
+      if (err instanceof ApiError && err.status === 401) await auth.logout();
       setUser(null);
     } finally {
       setLoading(false);

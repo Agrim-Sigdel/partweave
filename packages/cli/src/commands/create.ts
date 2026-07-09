@@ -15,6 +15,8 @@ import {
   type PyPm,
 } from "../pm.js";
 import { ensureJsPm, ensurePyPm } from "../preflight.js";
+import { PartweaveError } from "../errors.js";
+import { emitError, emitSuccess } from "../output.js";
 import { Registry } from "../registry.js";
 import { writeProjectManifest } from "../projectmanifest.js";
 import { slugify } from "../render.js";
@@ -35,6 +37,8 @@ export interface CreateFlags {
   force?: boolean;
   install?: boolean; // run `bootstrap` after scaffolding (--install / --no-install)
   git?: boolean; // initialize a git repo + initial commit (--git / --no-git)
+  nonInteractive?: boolean; // never prompt (also implied by --json / non-TTY stdout)
+  json?: boolean; // emit a JSON result envelope (implies non-interactive)
 }
 
 /** True when `dir` already sits inside a git work tree (so we shouldn't nest a repo). */
@@ -75,11 +79,14 @@ function resolvePm<T extends string>(
 ): T {
   if (value === undefined) return detect();
   if ((allowed as readonly string[]).includes(value)) return value as T;
-  log.error(`Invalid ${flag} "${value}". Choose one of: ${allowed.join(", ")}.`);
-  process.exit(1);
+  throw new PartweaveError(
+    "usage",
+    `Invalid ${flag} "${value}". Choose one of: ${allowed.join(", ")}.`,
+    { flag, value, allowed: [...allowed] },
+  );
 }
 
-function appsFromFlags(flags: CreateFlags): AppName[] | null {
+export function appsFromFlags(flags: CreateFlags): AppName[] | null {
   const explicit = ["server", "web", "mobile"].some(
     (k) => flags[k as keyof CreateFlags] !== undefined,
   );
@@ -102,12 +109,30 @@ function defaultModules(registry: Registry, apps: AppName[]): string[] {
 }
 
 export async function runCreate(flags: CreateFlags): Promise<void> {
-  console.log("\n" + renderBanner());
-  intro(pc.dim("full-stack scaffolder — pick the parts, own the code"));
-  const registry = new Registry();
+  const json = flags.json === true;
+  try {
+    await createInner(flags, json);
+  } catch (err) {
+    emitError("create", json, err);
+  }
+}
 
+async function createInner(flags: CreateFlags, json: boolean): Promise<void> {
   const flagApps = appsFromFlags(flags);
-  const nonInteractive = flags.yes === true || flagApps !== null;
+  // A3 — never hang headless: no TTY, --json, --non-interactive, --yes, or any
+  // explicit app flag all switch off prompting.
+  const nonInteractive =
+    json ||
+    flags.nonInteractive === true ||
+    flags.yes === true ||
+    flagApps !== null ||
+    !process.stdout.isTTY;
+
+  if (!json) {
+    console.log("\n" + renderBanner());
+    intro(pc.dim("full-stack scaffolder — pick the parts, own the code"));
+  }
+  const registry = new Registry();
 
   const jsPm: JsPm = resolvePm(flags.jsPm, JS_PMS, detectJsPm, "--js-pm");
   const pyPm: PyPm = resolvePm(flags.pyPm, PY_PMS, detectPyPm, "--py-pm");
@@ -135,40 +160,42 @@ export async function runCreate(flags: CreateFlags): Promise<void> {
 
   // guard: don't clobber a non-empty directory
   if (existsSync(choices.outDir) && readdirSync(choices.outDir).length > 0 && !flags.force) {
-    log.error(`${choices.outDir} exists and is not empty. Use --force to override.`);
-    process.exit(1);
+    throw new PartweaveError(
+      "dir-exists",
+      `${choices.outDir} exists and is not empty. Use --force to override.`,
+      { dir: choices.outDir },
+    );
   }
 
-  // Make sure the chosen package managers exist (offer to install, else fall back
-  // to npm/pip) so the generated project matches a manager that's actually present.
-  const ensureOpts = { interactive: !nonInteractive, install: flags.install };
-  if (choices.apps.includes("web") || choices.apps.includes("mobile")) {
-    choices.jsPm = await ensureJsPm(choices.jsPm, ensureOpts);
-  }
-  if (choices.apps.includes("server")) {
-    choices.pyPm = await ensurePyPm(choices.pyPm, ensureOpts);
+  // Make sure the chosen package managers exist. In JSON mode we can't emit clack
+  // prompts/spinners (they'd corrupt stdout), so fall back silently to the
+  // always-present manager; otherwise offer to install / fall back interactively.
+  if (json) {
+    if (choices.apps.includes("web") || choices.apps.includes("mobile")) {
+      if (!hasCommand(choices.jsPm)) choices.jsPm = "npm";
+    }
+    if (choices.apps.includes("server") && !hasCommand(choices.pyPm)) {
+      choices.pyPm = "pip";
+    }
+  } else {
+    const ensureOpts = { interactive: !nonInteractive, install: flags.install };
+    if (choices.apps.includes("web") || choices.apps.includes("mobile")) {
+      choices.jsPm = await ensureJsPm(choices.jsPm, ensureOpts);
+    }
+    if (choices.apps.includes("server")) {
+      choices.pyPm = await ensurePyPm(choices.pyPm, ensureOpts);
+    }
   }
 
-  // resolve module dependencies / conflicts
-  let resolved;
-  try {
-    resolved = resolveModules(registry, choices.modules);
-  } catch (err) {
-    log.error((err as Error).message);
-    process.exit(1);
-  }
-  if (resolved.autoAdded.length) {
+  // resolve module dependencies / conflicts (throws typed PartweaveError)
+  const resolved = resolveModules(registry, choices.modules);
+  if (resolved.autoAdded.length && !json) {
     log.info(`Added required components: ${resolved.autoAdded.join(", ")}`);
   }
-  try {
-    validateApps(registry, resolved.modules, choices.apps);
-  } catch (err) {
-    log.error((err as Error).message);
-    process.exit(1);
-  }
+  validateApps(registry, resolved.modules, choices.apps);
 
-  const s = spinner();
-  s.start("Scaffolding");
+  const s = json ? null : spinner();
+  s?.start("Scaffolding");
   let result;
   try {
     const selection = {
@@ -188,11 +215,10 @@ export async function runCreate(flags: CreateFlags): Promise<void> {
       rootFiles: "all",
     });
   } catch (err) {
-    s.stop("Failed");
-    log.error((err as Error).message);
-    process.exit(1);
+    s?.stop("Failed");
+    throw err;
   }
-  s.stop(`Created ${result.written.length} files`);
+  s?.stop(`Created ${result.written.length} files`);
 
   writeProjectManifest(choices.outDir, {
     name: choices.projectName,
@@ -211,13 +237,14 @@ export async function runCreate(flags: CreateFlags): Promise<void> {
     installed = !isCancel(ans) && ans === true;
   }
   if (installed) {
-    log.step("Installing dependencies (npm run bootstrap)…");
+    if (!json) log.step("Installing dependencies (npm run bootstrap)…");
     const r = spawnSync("node", ["scripts/run.mjs", "bootstrap"], {
       cwd: choices.outDir,
-      stdio: "inherit",
+      // keep stdout clean for the JSON envelope; surface errors on stderr
+      stdio: json ? ["ignore", "ignore", "inherit"] : "inherit",
     });
     if (r.status) {
-      log.warn("bootstrap didn't finish cleanly — run `npm run bootstrap` in the project to retry.");
+      if (!json) log.warn("bootstrap didn't finish cleanly — run `npm run bootstrap` in the project to retry.");
       installed = false;
     }
   }
@@ -239,29 +266,50 @@ export async function runCreate(flags: CreateFlags): Promise<void> {
   }
   if (wantGit && gitAvailable && !alreadyRepo) {
     gitInitialized = initGit(choices.outDir);
-    if (gitInitialized) log.success("Initialized a git repository (branch main, initial commit).");
-    else log.warn("Couldn't create the initial git commit — the repo was left uninitialized.");
-  } else if (wantGit && !gitAvailable) {
+    if (!json) {
+      if (gitInitialized) log.success("Initialized a git repository (branch main, initial commit).");
+      else log.warn("Couldn't create the initial git commit — the repo was left uninitialized.");
+    }
+  } else if (!json && wantGit && !gitAvailable) {
     log.warn("git isn't installed — skipped repository initialization.");
-  } else if (wantGit && alreadyRepo) {
+  } else if (!json && wantGit && alreadyRepo) {
     log.info("Target is already inside a git repository — skipped `git init`.");
   }
 
-  const rel = basename(choices.outDir);
   const hasDocker = resolved.modules.includes("docker");
-  const steps = [`cd ${rel}`];
-  if (!installed) steps.push("npm run bootstrap");
-  if (choices.apps.includes("server")) {
-    steps.push(hasDocker ? "npm run db:up && npm run migrate" : "npm run migrate");
-    steps.push("npm run server");
-  }
-  if (choices.apps.includes("web")) steps.push("npm run web");
-  if (choices.apps.includes("mobile")) steps.push("npm run mobile");
-  note(
-    steps.join("\n") + "\n\n" + pc.dim("These work on macOS, Linux & Windows. On macOS/Linux, `make <task>` works too."),
-    "Next steps",
+  emitSuccess(
+    "create",
+    json,
+    {
+      projectName: choices.projectName,
+      outDir: choices.outDir,
+      apps: choices.apps,
+      modules: resolved.modules,
+      autoAdded: resolved.autoAdded,
+      jsPm: choices.jsPm,
+      pyPm: choices.pyPm,
+      fileCount: result.written.length,
+      files: [...result.written].sort(),
+      installed,
+      gitInitialized,
+      notes: result.notes,
+    },
+    () => {
+      const rel = basename(choices.outDir);
+      const steps = [`cd ${rel}`];
+      if (!installed) steps.push("npm run bootstrap");
+      if (choices.apps.includes("server")) {
+        steps.push(hasDocker ? "npm run db:up && npm run migrate" : "npm run migrate");
+        steps.push("npm run server");
+      }
+      if (choices.apps.includes("web")) steps.push("npm run web");
+      if (choices.apps.includes("mobile")) steps.push("npm run mobile");
+      note(
+        steps.join("\n") + "\n\n" + pc.dim("These work on macOS, Linux & Windows. On macOS/Linux, `make <task>` works too."),
+        "Next steps",
+      );
+      if (result.notes.length) note(result.notes.join("\n"), "Notes");
+      outro(pc.green("Done."));
+    },
   );
-
-  if (result.notes.length) note(result.notes.join("\n"), "Notes");
-  outro(pc.green("Done."));
 }

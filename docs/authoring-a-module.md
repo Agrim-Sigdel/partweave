@@ -71,7 +71,7 @@ The runners themselves live in the `_core` scaffolds (`_core/web/vitest.config.m
 `_core/mobile/jest.config.js`), so any app you generate can already run `pnpm test`. Web/mobile
 tests default to a fast `node` environment; component tests opt into a DOM with a
 `// @vitest-environment jsdom` (web) or `/** @jest-environment node|jsdom */` (mobile) docblock.
-See `modules/auth/*/src/auth/client.test.ts` for the pattern (mock `@/lib/*`, stub `fetch`).
+See `modules/auth/web/src/auth/auth-client.test.ts` for the pattern (inject deps, stub `fetch`).
 
 Run the exact checks CI runs against a generated project:
 

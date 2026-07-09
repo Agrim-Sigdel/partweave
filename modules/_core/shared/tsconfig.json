@@ -1,6 +1,9 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    // DOM adds the fetch/Response/RequestInit types the shared code uses at
+    // runtime (present in both the browser and the React Native runtime).
+    "lib": ["ES2023", "DOM"],
     "noEmit": true
   },
   "include": ["src"]

@@ -1,8 +1,36 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * The CLI's own version, read from its package.json so `--version` never drifts
+ * from the published package (F36). Walks up from this file — works from src
+ * (tsx, `packages/cli/src`) and from the built/packed `dist`. Falls back to
+ * "0.0.0" only if the manifest genuinely can't be found.
+ */
+export function readVersion(): string {
+  let cur = here;
+  for (let i = 0; i < 8; i++) {
+    const pkgPath = join(cur, "package.json");
+    if (existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
+          name?: string;
+          version?: string;
+        };
+        if (pkg.name === "partweave" && pkg.version) return pkg.version;
+      } catch {
+        // keep walking up on a malformed/unrelated package.json
+      }
+    }
+    const parent = dirname(cur);
+    if (parent === cur) break;
+    cur = parent;
+  }
+  return "0.0.0";
+}
 
 /**
  * Locate the `modules/` catalog. Order:

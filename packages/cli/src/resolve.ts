@@ -1,3 +1,4 @@
+import { PartweaveError } from "./errors.js";
 import type { Registry } from "./registry.js";
 import type { AppName } from "./types.js";
 
@@ -23,13 +24,16 @@ export function resolveModules(
   const visit = (id: string, stack: string[]): void => {
     if (resolved.has(id)) return;
     if (stack.includes(id)) {
-      throw new Error(
-        `Circular module dependency: ${[...stack, id].join(" → ")}`,
+      const cycle = [...stack, id];
+      throw new PartweaveError(
+        "conflict",
+        `Circular module dependency: ${cycle.join(" → ")}`,
+        { cycle },
       );
     }
     const mod = registry.get(id);
     if (!mod) {
-      throw new Error(`Unknown module: "${id}"`);
+      throw new PartweaveError("unknown-module", `Unknown module: "${id}"`, { id });
     }
     for (const dep of mod.manifest.requires) {
       if (!requested.has(dep)) autoAdded.add(dep);
@@ -46,15 +50,21 @@ export function resolveModules(
     const mod = registry.require(id);
     for (const c of mod.manifest.conflicts) {
       if (resolved.has(c)) {
-        throw new Error(`Modules "${id}" and "${c}" conflict and cannot both be selected.`);
+        throw new PartweaveError(
+          "conflict",
+          `Modules "${id}" and "${c}" conflict and cannot both be selected.`,
+          { modules: [id, c] },
+        );
       }
     }
     const cap = mod.manifest.provides;
     if (cap) {
       const other = provided.get(cap);
       if (other && other !== id) {
-        throw new Error(
+        throw new PartweaveError(
+          "conflict",
           `Modules "${id}" and "${other}" both provide "${cap}"; pick one.`,
+          { modules: [id, other], provides: cap },
         );
       }
       provided.set(cap, id);
@@ -105,18 +115,22 @@ export function validateApps(
 ): void {
   const have = new Set(apps);
   const problems: string[] = [];
+  const missing: { module: string; app: AppName }[] = [];
   for (const id of moduleIds) {
     const mod = registry.require(id);
     for (const app of mod.manifest.requiresApps) {
       if (!have.has(app)) {
         problems.push(`"${mod.manifest.id}" needs the ${app} app`);
+        missing.push({ module: mod.manifest.id, app });
       }
     }
   }
   if (problems.length) {
-    throw new Error(
+    throw new PartweaveError(
+      "missing-app",
       `Incompatible selection:\n  - ${problems.join("\n  - ")}\n` +
         `Enable the required app(s) or drop the component(s).`,
+      { missing },
     );
   }
 }

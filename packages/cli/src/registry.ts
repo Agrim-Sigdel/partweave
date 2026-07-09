@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { PartweaveError } from "./errors.js";
 import { findModulesDir } from "./paths.js";
 import { ManifestSchema, type Module } from "./types.js";
 
@@ -49,7 +50,7 @@ export class Registry {
 
   require(id: string): Module {
     const m = this.byId.get(id);
-    if (!m) throw new Error(`Unknown module: "${id}"`);
+    if (!m) throw new PartweaveError("unknown-module", `Unknown module: "${id}"`, { id });
     return m;
   }
 

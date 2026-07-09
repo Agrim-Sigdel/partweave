@@ -16,12 +16,21 @@ const { ApiError, fetchMe, logout } = vi.hoisted(() => {
   return { ApiError, fetchMe: vi.fn(), logout: vi.fn(async () => {}) };
 });
 
-vi.mock("@/auth/client", () => ({
+// The provider builds its client via @app/shared's createAuthClient — return our
+// spies so we can drive load()/login()/logout() without a real server, plus a
+// real ApiError class so the provider's `instanceof` 401 check works.
+vi.mock("@app/shared", () => ({
   ApiError,
-  fetchMe,
-  logout,
-  login: vi.fn(async () => {}),
-  register: vi.fn(async () => {}),
+  createAuthClient: () => ({
+    fetchMe,
+    logout,
+    login: vi.fn(async () => {}),
+    register: vi.fn(async () => {}),
+  }),
+}));
+vi.mock("@/lib/config", () => ({ API_URL: "http://api.test" }));
+vi.mock("@/lib/token-store", () => ({
+  tokenStore: { get: vi.fn(), set: vi.fn(), clear: vi.fn() },
 }));
 
 import { AuthProvider, useAuth } from "./auth-context";
