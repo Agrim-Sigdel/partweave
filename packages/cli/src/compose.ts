@@ -4,9 +4,10 @@ import {
   appendEnv,
   injectAtAnchor,
   mergePackageJsonDeps,
+  normalizeWorkspaceDeps,
 } from "./inject.js";
 import { copyTree, listFiles, writeFileEnsured } from "./fsutil.js";
-import { DEFAULT_JS_PM, DEFAULT_PY_PM } from "./pm.js";
+import { DEFAULT_JS_PM, DEFAULT_PY_PM, jsPmProfile } from "./pm.js";
 import type { Registry } from "./registry.js";
 import { isBinaryPath, slugify } from "./render.js";
 import {
@@ -19,6 +20,7 @@ import {
   buildReadme,
   buildRootPackageJson,
   buildServerDockerfile,
+  buildTaskRunner,
   buildTsconfigBase,
   buildTurboJson,
 } from "./rootgen.js";
@@ -148,6 +150,7 @@ function applyWiring(
   outDir: string,
   targets: Set<TargetName>,
   modules: Module[],
+  workspaceRange: string,
 ): void {
   // one anchor index per present target directory
   const indexes = new Map<TargetName, Map<string, string[]>>();
@@ -179,7 +182,7 @@ function applyWiring(
           if (existsSync(pkgPath)) {
             const merged = mergePackageJsonDeps(
               readFileSync(pkgPath, "utf8"),
-              wiring.deps,
+              normalizeWorkspaceDeps(wiring.deps, workspaceRange),
             );
             writeFileSync(pkgPath, merged);
           }
@@ -209,7 +212,8 @@ function writeStructuralRootFiles(
   // package.json's "workspaces" field (built by buildRootPackageJson).
   const workspace = buildJsWorkspace(ctx);
   if (workspace) writeFileEnsured(join(outDir, "pnpm-workspace.yaml"), workspace);
-  const rootPkg = buildRootPackageJson(ctx);
+  const hasDocker = modules.some((m) => m.manifest.id === "docker");
+  const rootPkg = buildRootPackageJson(ctx, hasDocker);
   if (rootPkg) writeFileEnsured(join(outDir, "package.json"), rootPkg);
   const turbo = buildTurboJson(ctx);
   if (turbo) writeFileEnsured(join(outDir, "turbo.json"), turbo);
@@ -220,7 +224,9 @@ function writeStructuralRootFiles(
   // pip path: a helper that installs the server's deps from pyproject into .venv.
   const pipSync = buildPipSyncScript(ctx);
   if (pipSync) writeFileEnsured(join(outDir, "apps/server/scripts/sync_deps.py"), pipSync);
-  const hasDocker = modules.some((m) => m.manifest.id === "docker");
+  // The cross-platform task runner every task delegates to (works on Windows too);
+  // the Makefile is a thin Unix wrapper around it.
+  writeFileEnsured(join(outDir, "scripts/run.mjs"), buildTaskRunner(ctx, hasDocker));
   writeFileEnsured(join(outDir, "Makefile"), buildMakefile(ctx, hasDocker));
   writeFileEnsured(join(outDir, ".env.example"), buildBaseEnv(ctx));
 }
@@ -259,7 +265,7 @@ export function compose(opts: ComposeOptions): ComposeResult {
   }
 
   // 4. wiring (restricted to the targets being wired)
-  applyWiring(outDir, wireTargets, modules);
+  applyWiring(outDir, wireTargets, modules, jsPmProfile(ctx.jsPm).workspaceRange);
 
   // 5. env
   applyEnv(outDir, modules);

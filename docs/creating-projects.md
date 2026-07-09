@@ -35,23 +35,28 @@ You don't need `pnpm` or `uv` — the generator adapts to what you pick (or what
 defaults to **pnpm** and **uv** when they're on your `PATH`, otherwise falls back to **npm** and
 **pip** (both ship with Node / Python). Override either explicitly with `--js-pm` / `--py-pm`, or
 choose them in the interactive prompt. The choice is recorded in `.partweave/manifest.json`, so
-later `add`s stay consistent. Everything the generator emits — the `Makefile`, workspace layout,
-CI, and the server `Dockerfile` — speaks the manager you chose. (The `pip` path uses a `.venv` and
-a small `apps/server/scripts/sync_deps.py` helper as the counterpart to `uv sync`.)
+later `add`s stay consistent. Everything the generator emits — the runner, `Makefile`, workspace
+layout, CI, and the server `Dockerfile` — speaks the manager you chose. (The `pip` path uses a
+`.venv` and a small `apps/server/scripts/sync_deps.py` helper as the counterpart to `uv sync`.)
+
+If you pick a manager that isn't installed, partweave offers to install it (pnpm via `corepack`,
+uv via its official installer) and otherwise falls back to npm/pip — so you never get a broken
+project. Run **`partweave doctor`** any time to check your environment and install a missing
+manager. Pass `--install` to `create` to run the install step automatically after scaffolding.
 
 ## Apps
 
 | App | Folder | Stack | Runs with |
 | --- | --- | --- | --- |
-| Server | `apps/server` | Django 5 + DRF, `uv` or `pip` (Python 3.12), SQLite by default | `make server` |
-| Web | `apps/web` | Next.js 14 (App Router) + TypeScript + Tailwind | `make web` |
-| Mobile | `apps/mobile` | Expo (React Native) + Expo Router + TypeScript | `make mobile` |
+| Server | `apps/server` | Django 5 + DRF, `uv` or `pip` (Python 3.12), SQLite by default | `npm run server` |
+| Web | `apps/web` | Next.js 14 (App Router) + TypeScript + Tailwind | `npm run web` |
+| Mobile | `apps/mobile` | Expo (React Native) + Expo Router + TypeScript | `npm run mobile` |
 
 Derived automatically:
 
 - `packages/shared` — shared TS interfaces/types — added whenever **web or mobile** is present.
 - `packages/api-client` — a **typed client generated from the server's OpenAPI schema** — added
-  whenever a **server + a client** are both present. Regenerate with `make gen-api`.
+  whenever a **server + a client** are both present. Regenerate with `npm run gen:api`.
 
 ## Components (available now)
 
@@ -88,14 +93,21 @@ create site --dir ~/apps/site --no-server --web --no-mobile
 
 ## After generating
 
-Every project has a `Makefile` tailored to what you selected:
+Every project ships a cross-platform task runner (`scripts/run.mjs`) with matching `npm run`
+scripts, so the same commands work on **macOS, Linux, and Windows**:
 
 ```sh
-make bootstrap                 # install deps (your chosen JS + Python managers)
-make db-up && make migrate     # Postgres (if docker) + migrations (if server)
-make server / make web / make mobile
-make gen-api                   # regenerate the typed client (if api-client present)
+npm run bootstrap              # install deps (your chosen JS + Python managers)
+npm run db:up && npm run migrate   # Postgres (if docker) + migrations (if server)
+npm run server / npm run web / npm run mobile
+npm run dev                    # run all dev servers at once
+npm run gen:api                # regenerate the typed client (if api-client present)
 ```
+
+On macOS/Linux a `Makefile` is generated too, as a thin convenience wrapper — `make bootstrap`,
+`make web`, etc. all just call the runner. Windows users use `npm run <task>` (or
+`node scripts/run.mjs <task>` directly). `bootstrap` is self-healing: if the project's package
+manager is missing it enables pnpm via `corepack`, or points you at the uv installer.
 
 Copy `.env.example` → `.env` and fill in values first. Each project also records what it
 contains in `.partweave/manifest.json`, which powers `add` (below).
@@ -120,7 +132,7 @@ Adding an app is smart: it scaffolds the new app (plus derived packages like `sh
 `api-client`) **and brings in the app-side of every component you already have**. So
 `add web` to a `server + auth` project also drops in the login page, auth context, and wires
 the provider — no manual glue. It then updates the workspace (`pnpm-workspace.yaml` or
-`package.json`), the `Makefile`, and `.env.example` for the new app.
+`package.json`), the runner/`Makefile`, and `.env.example` for the new app.
 
-After an `add`, `partweave` prints the exact sync commands for your project's package
-managers (e.g. `pnpm install` / `npm install` for JS apps, and the uv/pip sync for the server).
+After an `add`, `partweave` reminds you to run `npm run bootstrap` (and `npm run migrate` when the
+server changed) to sync the new dependencies.

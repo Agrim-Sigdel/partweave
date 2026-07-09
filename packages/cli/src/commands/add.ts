@@ -3,12 +3,6 @@ import { intro, log, note, outro, spinner } from "@clack/prompts";
 import pc from "picocolors";
 import { buildContext, compose, selectedTargets } from "../compose.js";
 import {
-  DEFAULT_JS_PM,
-  DEFAULT_PY_PM,
-  jsPmProfile,
-  pyPmProfile,
-} from "../pm.js";
-import {
   readProjectManifest,
   writeProjectManifest,
   type ProjectManifest,
@@ -67,13 +61,11 @@ export async function runAdd(ids: string[], flags: AddFlags): Promise<void> {
   if (appIds.length) manifest = addApps(registry, dir, manifest, appIds);
   if (moduleIds.length) manifest = addModules(registry, dir, manifest, moduleIds);
 
-  const js = jsPmProfile(manifest.jsPm ?? DEFAULT_JS_PM);
-  const py = pyPmProfile(manifest.pyPm ?? DEFAULT_PY_PM);
-  const reinstall: string[] = [];
-  if (manifest.apps.some((a) => a === "web" || a === "mobile")) reinstall.push(js.install);
-  if (manifest.apps.includes("server"))
-    reinstall.push(`cd apps/server && ${py.syncInServer} && ${py.run("python manage.py migrate")}`);
-  if (reinstall.length) note(reinstall.join("\n"), "Sync deps");
+  // Cross-platform: `npm run bootstrap` re-installs JS + server deps via the
+  // generated runner; follow with a migration when the server changed.
+  const reinstall: string[] = ["npm run bootstrap"];
+  if (manifest.apps.includes("server")) reinstall.push("npm run migrate");
+  note(reinstall.join("\n"), "Sync deps");
   outro(pc.green("Done."));
 }
 

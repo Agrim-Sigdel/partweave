@@ -3,6 +3,7 @@ import {
   appendEnv,
   injectAtAnchor,
   mergePackageJsonDeps,
+  normalizeWorkspaceDeps,
   parseDep,
 } from "./inject.js";
 import { Registry } from "./registry.js";
@@ -45,6 +46,20 @@ describe("dependency merging", () => {
     const out = JSON.parse(mergePackageJsonDeps(pkg, ["next@^15", "react@^18"]));
     expect(out.dependencies.next).toBe("^14"); // not overwritten
     expect(out.dependencies.react).toBe("^18");
+  });
+
+  it("rewrites the workspace protocol to the PM's range", () => {
+    // pnpm keeps workspace:*; npm can't parse it and uses a plain * instead.
+    expect(normalizeWorkspaceDeps(["@app/shared@workspace:*"], "workspace:*")).toEqual([
+      "@app/shared@workspace:*",
+    ]);
+    expect(normalizeWorkspaceDeps(["@app/shared@workspace:*"], "*")).toEqual([
+      "@app/shared@*",
+    ]);
+    // non-workspace deps pass through untouched under either PM.
+    expect(normalizeWorkspaceDeps(["expo-secure-store@~15.0.8"], "*")).toEqual([
+      "expo-secure-store@~15.0.8",
+    ]);
   });
 });
 

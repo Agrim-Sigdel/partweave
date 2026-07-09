@@ -30,6 +30,12 @@ export interface JsPmProfile {
   usesWorkspaceYaml: boolean;
   /** pnpm's symlinked store breaks Expo, so a mobile project needs a hoisted .npmrc; npm is already flat */
   needsHoistNpmrc: boolean;
+  /**
+   * Version range used in package.json to depend on a sibling workspace package.
+   * pnpm/yarn understand the `workspace:*` protocol; npm does not (it errors with
+   * EUNSUPPORTEDPROTOCOL) and instead resolves a plain `*` range to the local member.
+   */
+  workspaceRange: string;
 }
 
 const PNPM_VERSION = "pnpm@10.20.0";
@@ -44,6 +50,7 @@ export function jsPmProfile(name: JsPm): JsPmProfile {
       packageManagerField: null,
       usesWorkspaceYaml: false,
       needsHoistNpmrc: false,
+      workspaceRange: "*",
     };
   }
   return {
@@ -54,6 +61,7 @@ export function jsPmProfile(name: JsPm): JsPmProfile {
     packageManagerField: PNPM_VERSION,
     usesWorkspaceYaml: true,
     needsHoistNpmrc: true,
+    workspaceRange: "workspace:*",
   };
 }
 
@@ -90,6 +98,52 @@ export function pyPmProfile(name: PyPm): PyPmProfile {
     syncInServer: "uv sync",
     run: (cmd) => `uv run ${cmd}`,
     needsSyncScript: false,
+  };
+}
+
+/**
+ * How to install a package manager that isn't on PATH, or null for the ones that
+ * always ship (npm with Node, pip with Python). `cmd`/`args` run non-interactively;
+ * `label` is what we show the user before running it.
+ */
+export interface InstallPlan {
+  label: string;
+  cmd: string;
+  args: string[];
+  /** copy-pasteable one-liner shown when we can't (or won't) run it for them */
+  hint: string;
+}
+
+/** Install plan for a JS package manager. pnpm ships with Node via corepack. */
+export function jsPmInstallPlan(pm: JsPm): InstallPlan | null {
+  if (pm === "npm") return null;
+  return {
+    label: "Enabling pnpm via corepack",
+    cmd: "corepack",
+    args: ["enable", "pnpm"],
+    hint: "corepack enable pnpm   (or: npm i -g pnpm)",
+  };
+}
+
+/** Install plan for a Python package manager. pip ships with Python. */
+export function pyPmInstallPlan(pm: PyPm): InstallPlan | null {
+  if (pm === "pip") return null;
+  // uv has an official installer; the invocation differs per OS.
+  if (process.platform === "win32") {
+    const ps = 'irm https://astral.sh/uv/install.ps1 | iex';
+    return {
+      label: "Installing uv",
+      cmd: "powershell",
+      args: ["-ExecutionPolicy", "Bypass", "-c", ps],
+      hint: `powershell -ExecutionPolicy Bypass -c "${ps}"`,
+    };
+  }
+  const sh = "curl -LsSf https://astral.sh/uv/install.sh | sh";
+  return {
+    label: "Installing uv",
+    cmd: "sh",
+    args: ["-c", sh],
+    hint: sh,
   };
 }
 

@@ -1,6 +1,7 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import { basename, resolve } from "node:path";
-import { intro, log, note, outro, spinner } from "@clack/prompts";
+import { confirm, intro, isCancel, log, note, outro, spinner } from "@clack/prompts";
 import pc from "picocolors";
 import { buildContext, compose, selectedTargets } from "../compose.js";
 import {
@@ -11,6 +12,7 @@ import {
   type JsPm,
   type PyPm,
 } from "../pm.js";
+import { ensureJsPm, ensurePyPm } from "../preflight.js";
 import { Registry } from "../registry.js";
 import { writeProjectManifest } from "../projectmanifest.js";
 import { slugify } from "../render.js";
@@ -29,6 +31,7 @@ export interface CreateFlags {
   pyPm?: string; // uv | pip
   yes?: boolean;
   force?: boolean;
+  install?: boolean; // run `bootstrap` after scaffolding (--install / --no-install)
 }
 
 /** Validate a --js-pm/--py-pm flag, or fall back to what's installed. */
@@ -103,6 +106,16 @@ export async function runCreate(flags: CreateFlags): Promise<void> {
     process.exit(1);
   }
 
+  // Make sure the chosen package managers exist (offer to install, else fall back
+  // to npm/pip) so the generated project matches a manager that's actually present.
+  const ensureOpts = { interactive: !nonInteractive, install: flags.install };
+  if (choices.apps.includes("web") || choices.apps.includes("mobile")) {
+    choices.jsPm = await ensureJsPm(choices.jsPm, ensureOpts);
+  }
+  if (choices.apps.includes("server")) {
+    choices.pyPm = await ensurePyPm(choices.pyPm, ensureOpts);
+  }
+
   // resolve module dependencies / conflicts
   let resolved;
   try {
@@ -156,12 +169,40 @@ export async function runCreate(flags: CreateFlags): Promise<void> {
     pyPm: choices.pyPm,
   });
 
+  // Offer to install dependencies now (interactive) or on --install.
+  let installed = false;
+  if (nonInteractive) {
+    installed = flags.install === true;
+  } else {
+    const ans = await confirm({ message: "Install dependencies now?" });
+    installed = !isCancel(ans) && ans === true;
+  }
+  if (installed) {
+    log.step("Installing dependencies (npm run bootstrap)…");
+    const r = spawnSync("node", ["scripts/run.mjs", "bootstrap"], {
+      cwd: choices.outDir,
+      stdio: "inherit",
+    });
+    if (r.status) {
+      log.warn("bootstrap didn't finish cleanly — run `npm run bootstrap` in the project to retry.");
+      installed = false;
+    }
+  }
+
   const rel = basename(choices.outDir);
-  const steps = [`cd ${rel}`, "make bootstrap"];
-  if (choices.apps.includes("server")) steps.push("make db-up && make migrate", "make server");
-  if (choices.apps.includes("web")) steps.push("make web");
-  if (choices.apps.includes("mobile")) steps.push("make mobile");
-  note(steps.join("\n"), "Next steps");
+  const hasDocker = resolved.modules.includes("docker");
+  const steps = [`cd ${rel}`];
+  if (!installed) steps.push("npm run bootstrap");
+  if (choices.apps.includes("server")) {
+    steps.push(hasDocker ? "npm run db:up && npm run migrate" : "npm run migrate");
+    steps.push("npm run server");
+  }
+  if (choices.apps.includes("web")) steps.push("npm run web");
+  if (choices.apps.includes("mobile")) steps.push("npm run mobile");
+  note(
+    steps.join("\n") + "\n\n" + pc.dim("These work on macOS, Linux & Windows. On macOS/Linux, `make <task>` works too."),
+    "Next steps",
+  );
 
   if (result.notes.length) note(result.notes.join("\n"), "Notes");
   outro(pc.green("Done."));

@@ -57,6 +57,24 @@ export function parseDep(dep: string): { name: string; version: string } {
   return { name: dep, version: "latest" };
 }
 
+/**
+ * Rewrite the `workspace:*` protocol in `name@version` dep strings to the range
+ * the project's package manager understands. Module manifests always author
+ * sibling deps as `workspace:*` (the pnpm/yarn form); npm rejects that protocol,
+ * so for an npm project it becomes a plain `*` (which npm resolves to the local
+ * workspace member). Non-workspace deps pass through untouched.
+ */
+export function normalizeWorkspaceDeps(
+  deps: string[],
+  workspaceRange: string,
+): string[] {
+  return deps.map((dep) => {
+    const { name, version } = parseDep(dep);
+    if (version.startsWith("workspace:")) return `${name}@${workspaceRange}`;
+    return dep;
+  });
+}
+
 /** Merge npm deps into a package.json string, sorted, idempotent. */
 export function mergePackageJsonDeps(
   pkgJson: string,
