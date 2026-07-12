@@ -2,12 +2,13 @@ import { Command } from "commander";
 import { runAdd } from "./commands/add.js";
 import { runCreate, type CreateFlags } from "./commands/create.js";
 import { runDoctor } from "./commands/doctor.js";
+import { runExtract, type ExtractFlags } from "./commands/extract.js";
 import { runList } from "./commands/list.js";
 import { runPlan } from "./commands/plan.js";
 import { toPartweaveError } from "./errors.js";
 import { readVersion } from "./paths.js";
 
-export { runCreate, runAdd, runDoctor, runList, runPlan };
+export { runCreate, runAdd, runDoctor, runExtract, runList, runPlan };
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -50,6 +51,16 @@ export function buildProgram(): Command {
     .option("--json", "emit a machine-readable JSON result envelope")
     .action(async (items: string[], opts: { dir?: string; json?: boolean }) => {
       await runAdd(items, opts);
+    });
+
+  program
+    .command("extract")
+    .argument("<id>", "the module id for the extracted feature")
+    .description("Extract local features into a reusable module format")
+    .option("-d, --dir <path>", "project directory (default: cwd)")
+    .requiredOption("--from <paths>", "comma-separated paths to extract (e.g. apps/server/email)")
+    .action(async (id: string, opts: { dir?: string; from: string }) => {
+      await runExtract(id, opts);
     });
 
   program

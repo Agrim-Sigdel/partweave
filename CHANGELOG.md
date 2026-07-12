@@ -8,6 +8,11 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-07-12
+
+### Added
+- **`partweave extract` command:** Introduced the "Extraction Flow" to allow developers and AI agents to build features natively inside their generated project (e.g., `apps/server/email`), and then easily extract them into a reusable `partweave` module format. The command scaffolds the directory structure and a skeleton `module.json` manifest.
+
 ## [0.3.3] — 2026-07-09
 
 ### Changed
