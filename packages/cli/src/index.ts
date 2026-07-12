@@ -6,7 +6,7 @@ import { runExtract, type ExtractFlags } from "./commands/extract.js";
 import { runList } from "./commands/list.js";
 import { runPlan } from "./commands/plan.js";
 import { toPartweaveError } from "./errors.js";
-import { readVersion } from "./paths.js";
+import { readVersion, hasLocalModules } from "./paths.js";
 import { ensureRegistry } from "./fetcher.js";
 
 export { runCreate, runAdd, runDoctor, runExtract, runList, runPlan };
@@ -22,7 +22,9 @@ export function buildProgram(): Command {
       // Don't fetch registry if extracting local modules (it doesn't need it)
       if (actionCommand.name() === "extract") return;
       const forceUpdate = thisCommand.opts().update === true;
-      ensureRegistry(forceUpdate);
+      if (!hasLocalModules() || forceUpdate) {
+        ensureRegistry(forceUpdate);
+      }
     });
 
   program

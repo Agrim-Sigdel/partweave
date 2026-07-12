@@ -64,3 +64,24 @@ export function findModulesDir(): string {
     "Could not locate the modules/ catalog. Set PARTWEAVE_MODULES_DIR to point at it, or ensure the registry is downloaded.",
   );
 }
+
+/**
+ * Returns true if the modules directory exists locally (e.g. running in monorepo).
+ */
+export function hasLocalModules(): boolean {
+  if (process.env.PARTWEAVE_MODULES_DIR) {
+    const abs = resolve(process.env.PARTWEAVE_MODULES_DIR);
+    return existsSync(join(abs, "_core"));
+  }
+
+  let cur = here;
+  for (let i = 0; i < 8; i++) {
+    const candidate = join(cur, "modules");
+    if (existsSync(join(candidate, "_core"))) return true;
+    const parent = dirname(cur);
+    if (parent === cur) break;
+    cur = parent;
+  }
+
+  return false;
+}

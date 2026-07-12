@@ -1,6 +1,7 @@
 import { runCreate, type CreateFlags } from "./commands/create.js";
 import { Command } from "commander";
 import { ensureRegistry } from "./fetcher.js";
+import { hasLocalModules } from "./paths.js";
 
 /**
  * Dedicated `create-partweave` binary: same as `partweave create` but the create
@@ -26,7 +27,9 @@ program
   .option("--update", "force update the module registry from GitHub")
   .hook("preAction", (thisCommand) => {
     const forceUpdate = thisCommand.opts().update === true;
-    ensureRegistry(forceUpdate);
+    if (!hasLocalModules() || forceUpdate) {
+      ensureRegistry(forceUpdate);
+    }
   })
   .action(async (name: string | undefined, opts: Record<string, unknown>) => {
     const flags: CreateFlags = { ...(opts as CreateFlags), name };
