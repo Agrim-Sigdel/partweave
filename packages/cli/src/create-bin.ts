@@ -1,5 +1,6 @@
 import { runCreate, type CreateFlags } from "./commands/create.js";
 import { Command } from "commander";
+import { ensureRegistry } from "./fetcher.js";
 
 /**
  * Dedicated `create-partweave` binary: same as `partweave create` but the create
@@ -22,6 +23,11 @@ program
   .option("--py-pm <pm>", "Python package manager: uv | pip (default: auto-detect)")
   .option("-y, --yes", "skip prompts; use flags/defaults")
   .option("-f, --force", "write into a non-empty directory")
+  .option("--update", "force update the module registry from GitHub")
+  .hook("preAction", (thisCommand) => {
+    const forceUpdate = thisCommand.opts().update === true;
+    ensureRegistry(forceUpdate);
+  })
   .action(async (name: string | undefined, opts: Record<string, unknown>) => {
     const flags: CreateFlags = { ...(opts as CreateFlags), name };
     await runCreate(flags);

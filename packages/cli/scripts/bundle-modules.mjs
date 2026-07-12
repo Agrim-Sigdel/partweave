@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 
 const pkgDir = dirname(dirname(fileURLToPath(import.meta.url))); // packages/cli
 const root = join(pkgDir, "..", ".."); // repo root
-const copied = ["modules", "README.md", "LICENSE", "NOTICE"];
+const copied = ["README.md", "LICENSE", "NOTICE"];
 
 // `--clean` (run from postpack) removes the copied artifacts again. Otherwise a
 // leftover packages/cli/modules/ would shadow the repo-root catalog on the next
@@ -21,16 +21,8 @@ if (process.argv.includes("--clean")) {
   process.exit(0);
 }
 
-// The templates catalog — the CLI is useless without it.
-const modulesSrc = join(root, "modules");
-const modulesDest = join(pkgDir, "modules");
-if (!existsSync(join(modulesSrc, "_core"))) {
-  console.error(`✗ modules catalog not found at ${modulesSrc} (expected a _core/ inside it)`);
-  process.exit(1);
-}
-await rm(modulesDest, { recursive: true, force: true });
-await cp(modulesSrc, modulesDest, { recursive: true });
-console.log(`▸ Bundled modules/ into ${modulesDest}`);
+// The templates catalog is now fetched dynamically from GitHub.
+// We only need to bundle the README and licenses here.
 
 // README + LICENSE + NOTICE so the npm package page, license metadata, and the
 // Apache attribution notice ship with the package.

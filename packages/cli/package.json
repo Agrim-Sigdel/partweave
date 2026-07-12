@@ -1,6 +1,6 @@
 {
   "name": "partweave",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "A modular full-stack scaffolder — pick the parts you need (Django server, Next.js web, Expo mobile) and generate only that code, wired together.",
   "type": "module",
   "license": "Apache-2.0",
@@ -39,7 +39,6 @@
   },
   "files": [
     "dist/**/*.js",
-    "modules",
     "README.md",
     "LICENSE",
     "NOTICE"
@@ -58,10 +57,12 @@
     "@clack/prompts": "^0.9.1",
     "commander": "^12.1.0",
     "picocolors": "^1.1.1",
+    "tar": "^7.5.20",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/tar": "^7.0.87",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",

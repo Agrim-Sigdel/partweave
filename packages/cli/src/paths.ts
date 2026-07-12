@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { REGISTRY_DIR } from "./fetcher.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -54,7 +55,12 @@ export function findModulesDir(): string {
     if (parent === cur) break;
     cur = parent;
   }
+
+  // Fallback to the global registry cache (populated by fetcher.ts)
+  const registryModules = join(REGISTRY_DIR, "modules");
+  if (existsSync(join(registryModules, "_core"))) return registryModules;
+
   throw new Error(
-    "Could not locate the modules/ catalog. Set PARTWEAVE_MODULES_DIR to point at it.",
+    "Could not locate the modules/ catalog. Set PARTWEAVE_MODULES_DIR to point at it, or ensure the registry is downloaded.",
   );
 }

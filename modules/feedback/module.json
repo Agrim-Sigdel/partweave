@@ -1,0 +1,15 @@
+{
+  "id": "feedback",
+  "title": "Feedback (Extracted Full-Stack Module)",
+  "description": "A full-stack user feedback feature (Django backend + Next.js web + Expo mobile).",
+  "targets": ["server", "web", "mobile"],
+  "requiresApps": ["server"],
+  "wiring": {
+    "server": {
+      "anchors": {
+        "installed-apps": ["\"feedback\",\n"],
+        "urls": ["path(\"api/feedback/\", include(\"feedback.urls\")),\n"]
+      }
+    }
+  }
+}

@@ -8,6 +8,12 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-12
+### Added
+- **Dynamic Module Registry**: The CLI now fetches modules directly from GitHub (`main` branch) by default, bypassing the NPM release cycle.
+- `--update` flag: Force update the remote registry cache before scaffolding or adding modules.
+- **Feedback Module**: A full-stack (Django/Next.js/Expo) user feedback module.
+
 ## [0.4.0] — 2026-07-12
 
 ### Added
