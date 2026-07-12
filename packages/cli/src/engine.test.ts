@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -200,5 +200,81 @@ describe("create-then-add is idempotent (no double-wiring)", () => {
     const before = readFileSync(settings, "utf8");
     compose({ selection: add, registry, scaffoldTargets: new Set(), wireTargets: selectedTargets(buildContext(add)), rootFiles: "none" });
     expect(readFileSync(settings, "utf8")).toBe(before);
+  });
+});
+
+describe("create-then-add-app scaffolds and re-wires without clobbering edits (F4/S0.5)", () => {
+  const registry = new Registry();
+  const dirs: string[] = [];
+  afterAll(() => dirs.forEach((d) => rmSync(d, { recursive: true, force: true })));
+
+  const sel = (dir: string, apps: ("server" | "web" | "mobile")[], modules: string[]): Selection => ({
+    projectName: "e2e",
+    outDir: dir,
+    apps,
+    modules,
+    jsPm: "pnpm",
+    pyPm: "uv",
+  });
+
+  // Mirror the add-app path in commands/add.ts: scaffold only the *new* targets,
+  // wire them, and regenerate structural root files in preserve mode.
+  const addApp = (dir: string, oldApps: ("server" | "web" | "mobile")[], newApps: ("server" | "web" | "mobile")[], modules: string[]) => {
+    const oldTargets = selectedTargets(buildContext(sel(dir, oldApps, modules)));
+    const newTargets = selectedTargets(buildContext(sel(dir, newApps, modules)));
+    const scaffold = new Set([...newTargets].filter((t) => !oldTargets.has(t)));
+    return compose({
+      selection: sel(dir, newApps, modules),
+      registry,
+      scaffoldTargets: scaffold,
+      wireTargets: scaffold,
+      rootFiles: "structural",
+      previousApps: oldApps,
+    });
+  };
+
+  it("adds `web` to a server+auth project: web scaffolded, workspace membership updated once", () => {
+    const dir = mkdtempSync(join(tmpdir(), "pw-addapp-"));
+    dirs.push(dir);
+    const modules = resolveModules(registry, ["auth"]).modules;
+
+    // create: server-only + auth
+    const create = sel(dir, ["server"], modules);
+    const targets = selectedTargets(buildContext(create));
+    compose({ selection: create, registry, scaffoldTargets: targets, wireTargets: targets, rootFiles: "all" });
+    expect(existsSync(join(dir, "apps/web"))).toBe(false);
+
+    // add web
+    addApp(dir, ["server"], ["server", "web"], modules);
+    // web app scaffolded, incl. auth's web-side wiring (login page/provider)
+    expect(existsSync(join(dir, "apps/web"))).toBe(true);
+    // workspace now lists the web app exactly once
+    const ws = readFileSync(join(dir, "pnpm-workspace.yaml"), "utf8");
+    expect(count(ws, /apps\/web/g)).toBe(1);
+  });
+
+  it("keeps a hand-edited root file and drops the regenerated version as a .partweave-new sidecar", () => {
+    const dir = mkdtempSync(join(tmpdir(), "pw-preserve-"));
+    dirs.push(dir);
+    const modules = resolveModules(registry, ["auth"]).modules;
+
+    const create = sel(dir, ["server"], modules);
+    const targets = selectedTargets(buildContext(create));
+    compose({ selection: create, registry, scaffoldTargets: targets, wireTargets: targets, rootFiles: "all" });
+
+    // The user hand-edits the Makefile.
+    const makefile = join(dir, "Makefile");
+    const edited = readFileSync(makefile, "utf8") + "\n# my custom target\ndeploy:\n\t./deploy.sh\n";
+    writeFileSync(makefile, edited);
+
+    // add web → structural root files regenerate in preserve mode
+    const result = addApp(dir, ["server"], ["server", "web"], modules);
+
+    // the user's Makefile is untouched…
+    expect(readFileSync(makefile, "utf8")).toBe(edited);
+    // …and the regenerated version sits beside it for reconciliation…
+    expect(existsSync(`${makefile}.partweave-new`)).toBe(true);
+    // …with a note telling the user what happened.
+    expect(result.notes.some((n) => n.includes("Makefile") && n.includes(".partweave-new"))).toBe(true);
   });
 });

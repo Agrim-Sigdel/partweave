@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildContext } from "./compose.js";
 import { jsPmInstallPlan, pyPmInstallPlan } from "./pm.js";
 import {
+  buildCiWorkflows,
   buildEnvFiles,
   buildMakefile,
   buildRootPackageJson,
@@ -162,6 +163,24 @@ describe("buildEnvFiles (per-app env)", () => {
   it("emits no root infra file without POSTGRES_* keys", () => {
     const files = buildEnvFiles(ctx({ apps: ["server", "web"] }), []);
     expect(find(files, "")).toBeUndefined();
+  });
+});
+
+describe("buildCiWorkflows is green on first push (S0.2/F2)", () => {
+  it("pnpm CI never requires a committed lockfile", () => {
+    const wf = buildCiWorkflows(ctx({ jsPm: "pnpm", apps: ["web"] }));
+    const web = wf[".github/workflows/web.yml"];
+    // A missing/out-of-sync lockfile would hard-fail both of these.
+    expect(web).not.toContain("--frozen-lockfile");
+    expect(web).not.toContain("cache: pnpm");
+    expect(web).toContain("pnpm install --no-frozen-lockfile");
+  });
+
+  it("server CI runs on the sqlite default (no Postgres service needed)", () => {
+    const wf = buildCiWorkflows(ctx({ apps: ["server"] }));
+    const server = wf[".github/workflows/server.yml"];
+    expect(server).toContain("migrate");
+    expect(server).not.toContain("services:"); // no DB container to spin up
   });
 });
 

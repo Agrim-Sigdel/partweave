@@ -21,6 +21,9 @@ venv/
 .env.local
 .env.*.local
 
+# partweave — regenerated-file sidecars left by `add` when it won't clobber your edits
+*.partweave-new
+
 # os / editor
 .DS_Store
 *.log

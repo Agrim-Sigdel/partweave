@@ -13,6 +13,9 @@ export type ErrorKind =
   | "dir-exists" // target directory exists and is non-empty (no --force)
   | "not-a-project" // add/plan run outside a generated project
   | "io" // filesystem / spawn failure
+  | "not-found" // a referenced path/resource doesn't exist (e.g. extract --from)
+  | "fetch-failed" // couldn't download the remote module registry
+  | "update-failed" // couldn't update the cached module registry
   | "internal"; // anything unexpected
 
 /** kind → process exit code. Stable: treat these as an API, don't renumber. */
@@ -25,6 +28,9 @@ export const EXIT_CODES: Record<ErrorKind, number> = {
   "dir-exists": 6,
   "not-a-project": 7,
   io: 8,
+  "not-found": 9,
+  "fetch-failed": 10,
+  "update-failed": 11,
 };
 
 /** An expected, typed failure. `details` is serialized into the JSON error envelope. */

@@ -6,7 +6,7 @@ import {
   normalizeWorkspaceDeps,
   pyDepName,
 } from "./inject.js";
-import { copyTree, listFiles, writeFileEnsured } from "./fsutil.js";
+import { copyTree, listFiles, readIfExists, writeFileEnsured } from "./fsutil.js";
 import { DEFAULT_JS_PM, DEFAULT_PY_PM, jsPmProfile } from "./pm.js";
 import type { Registry } from "./registry.js";
 import { isBinaryPath, slugify } from "./render.js";
@@ -24,6 +24,7 @@ import {
   buildTurboJson,
 } from "./rootgen.js";
 import {
+  type AppName,
   CONVENIENCE_ANCHORS,
   type Module,
   type RenderContext,
@@ -45,6 +46,13 @@ export interface ComposeOptions {
   wireTargets: Set<TargetName>;
   /** which computed root files to (re)write: all (create), structural (add-app), none (add-module) */
   rootFiles: RootFilesMode;
+  /**
+   * The app set *before* this run (add-app only). Structural root files are
+   * regenerated for the new app set, but a file the user hand-edited since the
+   * last generation is preserved instead of clobbered (F4): we detect edits by
+   * comparing the on-disk file to what we would have generated for `previousApps`.
+   */
+  previousApps?: AppName[];
 }
 
 export interface ComposeResult {
@@ -246,32 +254,66 @@ function writeEnvFiles(outDir: string, ctx: RenderContext, modules: Module[]): s
   return written;
 }
 
-/** Derived, selection-dependent monorepo shell files (safe to regenerate). */
+/**
+ * Derived, selection-dependent monorepo shell files. Each is pure codegen from
+ * the render context, so they can be regenerated as the app set grows.
+ *
+ * On `create` (`baseline` undefined) they're written fresh. On `add` a file the
+ * user hand-edited must never be clobbered (F4) — yet workspace-membership files
+ * still need updating for the new app. We tell those apart by regenerating what
+ * we *would* have produced for the previous app set (`baseline`): if the on-disk
+ * file matches that, the user didn't touch it and it's safe to overwrite with the
+ * new version; if it differs, the user edited it, so we keep their file and drop
+ * the regenerated one beside it as `<file>.partweave-new`. Returns the rel paths
+ * of any files preserved this way so the caller can prompt the user to reconcile.
+ */
 function writeStructuralRootFiles(
   outDir: string,
   ctx: RenderContext,
   modules: Module[],
-): void {
-  // pnpm lists workspace members in pnpm-workspace.yaml; npm lists them in
-  // package.json's "workspaces" field (built by buildRootPackageJson).
-  const workspace = buildJsWorkspace(ctx);
-  if (workspace) writeFileEnsured(join(outDir, "pnpm-workspace.yaml"), workspace);
+  baseline: RenderContext | null,
+): string[] {
   const hasDocker = modules.some((m) => m.manifest.id === "docker");
-  const rootPkg = buildRootPackageJson(ctx, hasDocker);
-  if (rootPkg) writeFileEnsured(join(outDir, "package.json"), rootPkg);
-  const turbo = buildTurboJson(ctx);
-  if (turbo) writeFileEnsured(join(outDir, "turbo.json"), turbo);
-  const tsbase = buildTsconfigBase(ctx);
-  if (tsbase) writeFileEnsured(join(outDir, "tsconfig.base.json"), tsbase);
-  // pip path: a helper that installs the server's deps from pyproject into .venv.
-  const pipSync = buildPipSyncScript(ctx);
-  if (pipSync) writeFileEnsured(join(outDir, "apps/server/scripts/sync_deps.py"), pipSync);
-  // The cross-platform task runner every task delegates to (works on Windows too);
-  // the Makefile is a thin Unix wrapper around it.
-  writeFileEnsured(join(outDir, "scripts/run.mjs"), buildTaskRunner(ctx, hasDocker));
-  writeFileEnsured(join(outDir, "Makefile"), buildMakefile(ctx, hasDocker));
+  // Each spec builds its file purely from a render context, so we can compute
+  // both the new content (from ctx) and the previous content (from baseline).
+  const specs: Array<[string, (c: RenderContext) => string | null]> = [
+    // pnpm lists workspace members here; npm lists them in package.json below.
+    ["pnpm-workspace.yaml", (c) => buildJsWorkspace(c)],
+    ["package.json", (c) => buildRootPackageJson(c, hasDocker)],
+    ["turbo.json", (c) => buildTurboJson(c)],
+    ["tsconfig.base.json", (c) => buildTsconfigBase(c)],
+    // pip path: a helper that installs the server's deps from pyproject into .venv.
+    ["apps/server/scripts/sync_deps.py", (c) => buildPipSyncScript(c)],
+    // The cross-platform task runner every task delegates to (Windows too); the
+    // Makefile is a thin Unix wrapper around it.
+    ["scripts/run.mjs", (c) => buildTaskRunner(c, hasDocker)],
+    ["Makefile", (c) => buildMakefile(c, hasDocker)],
+  ];
+
+  const preserved: string[] = [];
+  for (const [rel, build] of specs) {
+    const next = build(ctx);
+    if (next === null) continue; // not applicable to this selection
+    const abs = join(outDir, rel);
+
+    if (!baseline) {
+      writeFileEnsured(abs, next);
+      continue;
+    }
+    const current = readIfExists(abs);
+    if (current === null || current === build(baseline)) {
+      // Absent, or untouched since we last generated it → safe to (re)write.
+      writeFileEnsured(abs, next);
+    } else if (current !== next) {
+      // The user edited this file — keep theirs, park the new one for reconcile.
+      writeFileEnsured(`${abs}.partweave-new`, next);
+      preserved.push(rel);
+    }
+    // (current === next → already up to date, nothing to do)
+  }
   // Per-app env files are written in the env step (writeEnvFiles), which needs the
   // resolved module list to route component keys.
+  return preserved;
 }
 
 export function compose(opts: ComposeOptions): ComposeResult {
@@ -290,8 +332,15 @@ export function compose(opts: ComposeOptions): ComposeResult {
     }
   }
 
-  // 2. computed root files (per-app env files are written in step 5, below)
-  if (rootFiles !== "none") writeStructuralRootFiles(outDir, ctx, modules);
+  // 2. computed root files (per-app env files are written in step 5, below).
+  // "all" = create (fresh write); "structural" = add-app (preserve hand edits, F4
+  // by diffing against what we'd have generated for the previous app set).
+  const baseline =
+    rootFiles === "structural" && opts.previousApps
+      ? buildContext({ ...selection, apps: opts.previousApps })
+      : null;
+  const preservedRootFiles =
+    rootFiles !== "none" ? writeStructuralRootFiles(outDir, ctx, modules, baseline) : [];
   if (rootFiles === "all") {
     writeFileEnsured(join(outDir, "README.md"), buildReadme(ctx, modules));
   }
@@ -332,5 +381,12 @@ export function compose(opts: ComposeOptions): ComposeResult {
 
   // 7. notes
   const notes = modules.flatMap((m) => m.manifest.notes);
+  if (preservedRootFiles.length) {
+    notes.push(
+      `Kept your edited root file(s): ${preservedRootFiles.join(", ")}. ` +
+        `The regenerated version of each was written alongside as ` +
+        `<file>.partweave-new — reconcile any new workspace members, then delete the .partweave-new file(s).`,
+    );
+  }
   return { written, notes };
 }

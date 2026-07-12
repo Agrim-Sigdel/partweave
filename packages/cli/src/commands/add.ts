@@ -133,21 +133,28 @@ function addApps(
 
   const s = json ? null : spinner();
   s?.start(`Adding app(s): ${toAdd.join(", ")}`);
+  let result;
   try {
     // Wire ALL installed components into the new targets (e.g. adding `web` to a
     // server+auth project brings in auth's login page + provider).
-    compose({
+    result = compose({
       selection: { ...sel(pm, dir, newApps), modules: resolved.modules },
       registry,
       scaffoldTargets: scaffold,
       wireTargets: scaffold,
       rootFiles: "structural",
+      // Preserve root files the user edited since the last generation (F4) by
+      // diffing against what we'd have generated for the pre-add app set.
+      previousApps: pm.apps,
     });
   } catch (err) {
     s?.stop("Failed");
     throw err;
   }
   s?.stop(`Added ${toAdd.join(", ")}`);
+  // Surface any "kept your edited root file" reconcile notes (F4).
+  if (result.notes.length && !json) note(result.notes.join("\n"), "Notes");
+  outcome.notes.push(...result.notes);
 
   outcome.addedApps.push(...toAdd);
   const updated = { ...pm, apps: newApps };

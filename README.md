@@ -12,6 +12,11 @@ CI) — all wired together.
 It's `create-t3-app` (choose your stack) meets `shadcn/ui` (you own the code that's added,
 built on clean, swappable interfaces).
 
+> **Scope, honestly.** partweave scaffolds **one opinionated stack** — Django (server),
+> Next.js (web), and Expo (mobile). You pick which of those apps and which components to
+> include, but the frameworks themselves aren't swappable yet (no Flask/FastAPI, Remix/SvelteKit,
+> etc.). Pluggable stacks are on the roadmap, not in the box today.
+
 ## Install
 
 **Run it directly — no install** (always the latest published version):
@@ -116,7 +121,17 @@ pnpm --filter partweave typecheck  # typecheck the engine
 ```
 
 The generator locates the catalog by walking up from the CLI to find `modules/`.
-Override with `PARTWEAVE_MODULES_DIR=/path/to/modules`.
+Override with `PARTWEAVE_MODULES_DIR=/path/to/modules`. When no local `modules/` is
+found (a normal `npx partweave` install), the catalog is fetched from GitHub and
+cached under `~/.partweave/registry/`; `--update` refreshes that cache.
+
+**Reproducible scaffolds.** By default the fetched catalog tracks `main` (always the
+latest components). To freeze it to a release — so a scaffold is byte-stable across
+machines and over time — pin the ref:
+```sh
+PARTWEAVE_REGISTRY_REF=v0.5.0 partweave create my-app --server --web
+```
+`PARTWEAVE_REGISTRY_REF` accepts any branch, tag, or commit; each is cached separately.
 
 See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full setup, project layout, the checks CI
 enforces, and how to add a component.

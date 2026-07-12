@@ -4,7 +4,7 @@ import { intro, log, outro } from "@clack/prompts";
 import pc from "picocolors";
 import { PartweaveError } from "../errors.js";
 import { readProjectManifest } from "../projectmanifest.js";
-import type { ModuleManifest, TargetName } from "../types.js";
+import { APPS, type AppName, type Manifest, type TargetName } from "../types.js";
 
 export interface ExtractFlags {
   dir?: string;
@@ -83,12 +83,17 @@ export async function runExtract(id: string, flags: ExtractFlags): Promise<void>
   // Generate skeleton module.json
   const manifestPath = join(outDir, "module.json");
   if (!existsSync(manifestPath)) {
-    const skeleton: Partial<ModuleManifest> = {
+    // requiresApps only names apps (server/web/mobile) — not the derived
+    // root/shared/api-client targets — so a consumer knows which app toggles
+    // this module needs.
+    const isApp = (t: TargetName): t is AppName =>
+      (APPS as readonly string[]).includes(t);
+    const skeleton: Partial<Manifest> = {
       id,
       title: `${id} (Extracted)`,
       description: `Extracted from local project ${pm.name}`,
-      targets: Array.from(targets) as TargetName[],
-      requiresApps: Array.from(targets) as string[],
+      targets: Array.from(targets),
+      requiresApps: Array.from(targets).filter(isApp),
       wiring: {},
     };
     writeFileSync(manifestPath, JSON.stringify(skeleton, null, 2));

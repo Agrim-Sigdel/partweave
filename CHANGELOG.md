@@ -8,6 +8,36 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+### Security
+- **Storage path-traversal fix (F21/S0.3).** The `storage` module now validates every
+  object key: `..` segments, absolute paths, and drive-letter/UNC keys are rejected
+  (`storage.base.safe_key`), and `LocalStorage` additionally asserts the resolved path
+  stays inside `MEDIA_ROOT`. Previously a key like `../../etc/x` could escape the media
+  root. Applies to the S3 backend too. Guarded by new pytest cases.
+
+### Fixed
+- **`add <app>` no longer clobbers hand-edited root files (F4/S0.4).** When you add an app,
+  structural root files (`package.json`, `pnpm-workspace.yaml`, `turbo.json`,
+  `tsconfig.base.json`, `scripts/run.mjs`, `Makefile`) are regenerated for the new app set —
+  but a file you've edited since the last generation is now preserved: the regenerated
+  version is written beside it as `<file>.partweave-new` and a note tells you to reconcile.
+  Files you haven't touched (e.g. workspace membership) still update cleanly. Edits are
+  detected by diffing against what would have been generated for the previous app set.
+- **Generated CI is green on the first push (F2/S0.2).** The pnpm workflow no longer uses
+  `--frozen-lockfile` or `cache: pnpm` (both hard-fail when no lockfile has been committed
+  yet). Commit the generated `pnpm-lock.yaml` and tighten back for cached, reproducible
+  installs.
+- **CLI typecheck is clean again.** Fixed pre-existing type errors introduced with the 0.4/0.5
+  `extract`/registry features (`Manifest` import, `ErrorKind` taxonomy gained `not-found`/
+  `fetch-failed`/`update-failed`, unused import). `extract`'s generated manifest now lists only
+  real apps in `requiresApps`.
+
+### Added
+- **Pin the module registry for reproducible scaffolds.** `PARTWEAVE_REGISTRY_REF=<branch|tag|commit>`
+  freezes the GitHub-fetched catalog to a specific ref (default `main`); each ref is cached
+  separately and `--update` refreshes it via fetch + reset (tag-safe).
+- Honest single-stack scope caveat in the README.
+
 ## [0.5.0] - 2026-07-12
 ### Added
 - **Dynamic Module Registry**: The CLI now fetches modules directly from GitHub (`main` branch) by default, bypassing the NPM release cycle.

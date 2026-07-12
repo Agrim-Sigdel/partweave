@@ -502,12 +502,17 @@ function jsCiSteps(ctx: RenderContext): string {
           node-version: 20
       - run: npm install`;
   }
+  // First push must be green even when no lockfile has been committed yet (F2).
+  // Two things hard-fail on a missing pnpm-lock.yaml: pnpm auto-enables
+  // --frozen-lockfile in CI, and setup-node's `cache: pnpm` refuses to run
+  // without a lockfile to hash. So we drop both here. Once you commit the
+  // generated pnpm-lock.yaml, add `cache: pnpm` back and switch to
+  // --frozen-lockfile for reproducible, cached installs.
   return `      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile`;
+      - run: pnpm install --no-frozen-lockfile`;
 }
 
 /** GitHub Actions steps that set up the Python PM, install deps, and run checks (working-directory: apps/server). */

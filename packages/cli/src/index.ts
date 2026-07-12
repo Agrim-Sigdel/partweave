@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { runAdd } from "./commands/add.js";
 import { runCreate, type CreateFlags } from "./commands/create.js";
 import { runDoctor } from "./commands/doctor.js";
-import { runExtract, type ExtractFlags } from "./commands/extract.js";
+import { runExtract } from "./commands/extract.js";
 import { runList } from "./commands/list.js";
 import { runPlan } from "./commands/plan.js";
 import { toPartweaveError } from "./errors.js";

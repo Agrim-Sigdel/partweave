@@ -2,7 +2,7 @@ from typing import BinaryIO
 
 from django.conf import settings
 
-from .base import StorageProvider
+from .base import StorageProvider, safe_key
 
 
 class S3Storage(StorageProvider):
@@ -20,11 +20,12 @@ class S3Storage(StorageProvider):
         )
 
     def save(self, key: str, content: BinaryIO) -> str:
+        key = safe_key(key)
         self.client.upload_fileobj(content, self.bucket, key)
         return self.url(key)
 
     def url(self, key: str) -> str:
-        return f"https://{self.bucket}.s3.amazonaws.com/{key}"
+        return f"https://{self.bucket}.s3.amazonaws.com/{safe_key(key)}"
 
     def delete(self, key: str) -> None:
-        self.client.delete_object(Bucket=self.bucket, Key=key)
+        self.client.delete_object(Bucket=self.bucket, Key=safe_key(key))
