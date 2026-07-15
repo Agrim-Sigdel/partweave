@@ -5,6 +5,7 @@
   "kind": "feature",
   "targets": ["web", "mobile"],
   "requiresApps": ["server"],
+  "requiresOneOf": [["web", "mobile"]],
   "requires": ["auth"],
   "default": true,
   "wiring": {

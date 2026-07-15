@@ -1,7 +1,13 @@
 import { resolve } from "node:path";
 import { intro, log, note, outro, spinner } from "@clack/prompts";
 import pc from "picocolors";
-import { buildContext, compose, selectedTargets } from "../compose.js";
+import {
+  buildContext,
+  compose,
+  selectedTargets,
+  skippedTargetsNote,
+  type SkippedTarget,
+} from "../compose.js";
 import { PartweaveError } from "../errors.js";
 import { emitError, emitSuccess } from "../output.js";
 import {
@@ -35,6 +41,10 @@ interface AddOutcome {
   addedApps: AppName[];
   addedModules: string[];
   notes: string[];
+  /** distinct present targets the wired modules contributed to (accumulated) */
+  appliedTargets: TargetName[];
+  /** module targets that weren't present in the project, so weren't wired */
+  skippedTargets: SkippedTarget[];
 }
 
 /**
@@ -76,7 +86,13 @@ async function addInner(ids: string[], flags: AddFlags, json: boolean): Promise<
   const appIds = ids.filter(isApp);
   const moduleIds = ids.filter((id) => !isApp(id));
 
-  const outcome: AddOutcome = { addedApps: [], addedModules: [], notes: [] };
+  const outcome: AddOutcome = {
+    addedApps: [],
+    addedModules: [],
+    notes: [],
+    appliedTargets: [],
+    skippedTargets: [],
+  };
 
   // Apps first, so components added in the same call can rely on them.
   let manifest: ProjectManifest = pm;
@@ -93,6 +109,8 @@ async function addInner(ids: string[], flags: AddFlags, json: boolean): Promise<
       apps: manifest.apps,
       modules: manifest.modules,
       notes: outcome.notes,
+      appliedTargets: [...new Set(outcome.appliedTargets)],
+      skippedTargets: outcome.skippedTargets,
     },
     () => {
       // Cross-platform: `npm run bootstrap` re-installs JS + server deps via the
@@ -100,6 +118,8 @@ async function addInner(ids: string[], flags: AddFlags, json: boolean): Promise<
       const reinstall: string[] = ["npm run bootstrap"];
       if (manifest.apps.includes("server")) reinstall.push("npm run migrate");
       note(reinstall.join("\n"), "Sync deps");
+      const skipped = skippedTargetsNote(outcome.skippedTargets);
+      if (skipped) log.message(pc.dim(skipped));
       outro(pc.green("Done."));
     },
   );
@@ -155,6 +175,8 @@ function addApps(
   // Surface any "kept your edited root file" reconcile notes (F4).
   if (result.notes.length && !json) note(result.notes.join("\n"), "Notes");
   outcome.notes.push(...result.notes);
+  outcome.appliedTargets.push(...result.appliedTargets);
+  outcome.skippedTargets.push(...result.skippedTargets);
 
   outcome.addedApps.push(...toAdd);
   const updated = { ...pm, apps: newApps };
@@ -202,6 +224,8 @@ function addModules(
 
   outcome.addedModules.push(...delta);
   outcome.notes.push(...result.notes);
+  outcome.appliedTargets.push(...result.appliedTargets);
+  outcome.skippedTargets.push(...result.skippedTargets);
   const updated = { ...pm, modules: resolved.modules };
   writeProjectManifest(dir, updated);
   return updated;

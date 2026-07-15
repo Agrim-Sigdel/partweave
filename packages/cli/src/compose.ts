@@ -56,9 +56,68 @@ export interface ComposeOptions {
   previousApps?: AppName[];
 }
 
+/** A target a module declares but that isn't present in the project this run. */
+export interface SkippedTarget {
+  module: string;
+  target: TargetName;
+}
+
 export interface ComposeResult {
   written: string[];
   notes: string[];
+  /**
+   * Distinct targets that at least one selected module actually contributes to,
+   * because the target is present in the project (in COPY_ORDER order).
+   */
+  appliedTargets: TargetName[];
+  /**
+   * Per-module targets a module declares in its manifest but that aren't present
+   * in the project — so that slice of the module was silently not wired. Purely
+   * informational: modules are still applied to whichever targets DO exist.
+   */
+  skippedTargets: SkippedTarget[];
+}
+
+/** Targets that correspond to a user-facing app toggle (server/web/mobile). */
+const APP_TARGETS = new Set<TargetName>(["server", "web", "mobile"]);
+
+/**
+ * A one-line, human-readable summary of the targets a run skipped, e.g.
+ * `skipped: mobile (app not present)`. Deduplicated by target. Returns null when
+ * nothing was skipped.
+ */
+export function skippedTargetsNote(skipped: SkippedTarget[]): string | null {
+  if (skipped.length === 0) return null;
+  const seen = new Set<TargetName>();
+  const parts: string[] = [];
+  for (const s of skipped) {
+    if (seen.has(s.target)) continue;
+    seen.add(s.target);
+    parts.push(`${s.target} ${APP_TARGETS.has(s.target) ? "(app not present)" : "(not present)"}`);
+  }
+  return `skipped: ${parts.join(", ")}`;
+}
+
+/**
+ * Partition each selected module's declared targets into those present in the
+ * project (applied) and those absent (skipped). Placement in `compose` is a
+ * best-effort intersection with the present targets — a module that targets
+ * [server, web, mobile] in a web-only project silently drops its server & mobile
+ * slices. This makes that observable without changing the placement behavior.
+ */
+function partitionTargets(
+  modules: Module[],
+  presentTargets: Set<TargetName>,
+): { appliedTargets: TargetName[]; skippedTargets: SkippedTarget[] } {
+  const applied = new Set<TargetName>();
+  const skippedTargets: SkippedTarget[] = [];
+  for (const mod of modules) {
+    for (const t of mod.manifest.targets) {
+      if (presentTargets.has(t)) applied.add(t);
+      else skippedTargets.push({ module: mod.manifest.id, target: t });
+    }
+  }
+  return { appliedTargets: COPY_ORDER.filter((t) => applied.has(t)), skippedTargets };
 }
 
 export function buildContext(selection: Selection): RenderContext {
@@ -514,5 +573,11 @@ export function compose(opts: ComposeOptions): ComposeResult {
         `<file>.partweave-new — reconcile any new workspace members, then delete the .partweave-new file(s).`,
     );
   }
-  return { written, notes };
+
+  // 8. reporting: which of each module's declared targets were present (applied)
+  // vs. absent (skipped). Placement above only wires targets that exist; this
+  // records the silent drops so create/add/plan can surface them.
+  const { appliedTargets, skippedTargets } = partitionTargets(modules, selectedTargets(ctx));
+
+  return { written, notes, appliedTargets, skippedTargets };
 }

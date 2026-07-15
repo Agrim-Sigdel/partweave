@@ -2,7 +2,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import pc from "picocolors";
-import { buildContext, compose, selectedTargets } from "../compose.js";
+import {
+  buildContext,
+  compose,
+  selectedTargets,
+  skippedTargetsNote,
+  type SkippedTarget,
+} from "../compose.js";
 import { emitError, emitSuccess } from "../output.js";
 import { Registry } from "../registry.js";
 import { resolveModules, validateApps } from "../resolve.js";
@@ -34,6 +40,10 @@ export interface Plan {
   env: Record<string, string>;
   /** post-generation notes */
   notes: string[];
+  /** distinct present targets the selected modules contribute to */
+  appliedTargets: TargetName[];
+  /** module targets declared but absent from this selection (silently unwired) */
+  skippedTargets: SkippedTarget[];
 }
 
 /**
@@ -89,6 +99,8 @@ export async function runPlan(flags: PlanFlags): Promise<void> {
       fileCount: result.written.length,
       env,
       notes: result.notes,
+      appliedTargets: result.appliedTargets,
+      skippedTargets: result.skippedTargets,
     };
 
     emitSuccess("plan", json, plan, () => {
@@ -101,6 +113,8 @@ export async function runPlan(flags: PlanFlags): Promise<void> {
       const envKeys = Object.keys(plan.env);
       if (envKeys.length) console.log(`  env        ${envKeys.join(", ")}`);
       if (plan.notes.length) console.log(pc.dim("\n" + plan.notes.join("\n")));
+      const skipped = skippedTargetsNote(plan.skippedTargets);
+      if (skipped) console.log(pc.dim(`  ${skipped}`));
       console.log();
     });
   } catch (err) {

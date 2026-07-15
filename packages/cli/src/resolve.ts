@@ -1,6 +1,25 @@
 import { PartweaveError } from "./errors.js";
 import type { Registry } from "./registry.js";
-import type { AppName } from "./types.js";
+import type { AppName, TargetName } from "./types.js";
+
+/**
+ * The target sub-projects that actually exist for a given app selection. Derived
+ * exactly the way `buildContext` + `selectedTargets` do (root is always present;
+ * shared/api-client are implied) so the contribution check below agrees with
+ * what `compose` would really generate.
+ */
+function presentTargets(apps: AppName[]): Set<TargetName> {
+  const hasServer = apps.includes("server");
+  const hasWeb = apps.includes("web");
+  const hasMobile = apps.includes("mobile");
+  const t = new Set<TargetName>(["root"]);
+  if (hasServer) t.add("server");
+  if (hasWeb) t.add("web");
+  if (hasMobile) t.add("mobile");
+  if (hasWeb || hasMobile) t.add("shared");
+  if (hasServer && (hasWeb || hasMobile)) t.add("api-client");
+  return t;
+}
 
 export interface ResolveResult {
   /** final module id list, dependency-complete, stably ordered */
@@ -31,10 +50,9 @@ export function resolveModules(
         { cycle },
       );
     }
-    const mod = registry.get(id);
-    if (!mod) {
-      throw new PartweaveError("unknown-module", `Unknown module: "${id}"`, { id });
-    }
+    // require() (not get()) so an unknown id carries the registry's
+    // "did you mean …?" suggestion — this is the path `--with` hits.
+    const mod = registry.require(id);
     for (const dep of mod.manifest.requires) {
       if (!requested.has(dep)) autoAdded.add(dep);
       visit(dep, [...stack, id]);
@@ -105,8 +123,14 @@ export function resolveModules(
 }
 
 /**
- * Ensures every resolved module's `requiresApps` are in the chosen app set.
- * Throws a clear message listing the offending module → missing app.
+ * Ensures the chosen app set can actually support every resolved module. Three
+ * checks, all reported together under the `missing-app` kind:
+ *   1. `requiresApps` — a flat AND: every listed app must be present.
+ *   2. `requiresOneOf` — disjunctive groups: each OR-group needs ≥1 app present.
+ *   3. contribution — a module whose `targets` don't intersect the present
+ *      targets can place no files/wiring, so selecting it is a silent no-op;
+ *      reject rather than "succeed" having done nothing.
+ * Throws a clear message listing every offending module → missing requirement.
  */
 export function validateApps(
   registry: Registry,
@@ -114,15 +138,37 @@ export function validateApps(
   apps: AppName[],
 ): void {
   const have = new Set(apps);
+  const present = presentTargets(apps);
   const problems: string[] = [];
-  const missing: { module: string; app: AppName }[] = [];
+  const missing: { module: string; app?: AppName; oneOf?: AppName[]; targets?: string[] }[] = [];
   for (const id of moduleIds) {
     const mod = registry.require(id);
+
+    // 1. flat AND
     for (const app of mod.manifest.requiresApps) {
       if (!have.has(app)) {
         problems.push(`"${mod.manifest.id}" needs the ${app} app`);
         missing.push({ module: mod.manifest.id, app });
       }
+    }
+
+    // 2. disjunctive OR-groups
+    for (const group of mod.manifest.requiresOneOf) {
+      if (!group.some((app) => have.has(app))) {
+        problems.push(
+          `"${mod.manifest.id}" needs at least one of: ${group.join(", ")}`,
+        );
+        missing.push({ module: mod.manifest.id, oneOf: group });
+      }
+    }
+
+    // 3. contribution check — the module targets nothing that exists here
+    if (!mod.manifest.targets.some((t) => present.has(t))) {
+      problems.push(
+        `"${mod.manifest.id}" contributes only to ${mod.manifest.targets.join(", ")}; ` +
+          `enable one of those, or drop it`,
+      );
+      missing.push({ module: mod.manifest.id, targets: mod.manifest.targets });
     }
   }
   if (problems.length) {

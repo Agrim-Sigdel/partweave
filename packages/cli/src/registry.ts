@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { checkCoherence, nearestId } from "./contract.js";
 import { PartweaveError } from "./errors.js";
 import { findModulesDir } from "./paths.js";
 import { ManifestSchema, type Module } from "./types.js";
@@ -42,6 +43,20 @@ export class Registry {
       }
       this.byId.set(parsed.data.id, { manifest: parsed.data, dir });
     }
+
+    // Second pass: coherence. The schema proves each manifest is well-typed;
+    // this proves it's *meaningful* (see contract.ts). It runs after every
+    // module is loaded so rules that span modules (e.g. requiresApps derivable
+    // through the `requires` closure) can resolve against the full catalog.
+    for (const mod of this.byId.values()) {
+      const problems = checkCoherence(mod, this.byId);
+      if (problems.length > 0) {
+        throw new Error(
+          `Incoherent module "${mod.manifest.id}":\n` +
+            problems.map((p) => `  - ${p}`).join("\n"),
+        );
+      }
+    }
   }
 
   get(id: string): Module | undefined {
@@ -50,7 +65,16 @@ export class Registry {
 
   require(id: string): Module {
     const m = this.byId.get(id);
-    if (!m) throw new PartweaveError("unknown-module", `Unknown module: "${id}"`, { id });
+    if (!m) {
+      const suggestion = nearestId(id, this.byId.keys());
+      const message = suggestion
+        ? `Unknown module "${id}" — did you mean "${suggestion}"?`
+        : `Unknown module: "${id}"`;
+      throw new PartweaveError("unknown-module", message, {
+        id,
+        ...(suggestion ? { suggestion } : {}),
+      });
+    }
     return m;
   }
 

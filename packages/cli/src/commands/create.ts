@@ -4,7 +4,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { confirm, intro, isCancel, log, note, outro, spinner } from "@clack/prompts";
 import pc from "picocolors";
 import { renderBanner } from "../banner.js";
-import { buildContext, compose, selectedTargets } from "../compose.js";
+import { buildContext, compose, selectedTargets, skippedTargetsNote } from "../compose.js";
 import {
   detectJsPm,
   detectPyPm,
@@ -350,6 +350,8 @@ async function createInner(flags: CreateFlags, json: boolean): Promise<void> {
       installed,
       gitInitialized,
       notes: result.notes,
+      appliedTargets: result.appliedTargets,
+      skippedTargets: result.skippedTargets,
     },
     () => {
       const rel = basename(choices.outDir);
@@ -366,6 +368,8 @@ async function createInner(flags: CreateFlags, json: boolean): Promise<void> {
         "Next steps",
       );
       if (result.notes.length) note(result.notes.join("\n"), "Notes");
+      const skipped = skippedTargetsNote(result.skippedTargets);
+      if (skipped) log.message(pc.dim(skipped));
       outro(pc.green("Done."));
     },
   );

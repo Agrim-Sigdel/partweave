@@ -64,6 +64,15 @@ export const ManifestSchema = z.object({
   targets: z.array(z.enum(TARGETS)).min(1),
   /** apps that MUST be selected for this module to work (e.g. auth needs server) */
   requiresApps: z.array(z.enum(APPS)).default([]),
+  /**
+   * Disjunctive app requirements: each inner array is an OR-group ("at least one
+   * of these apps must be present"). All groups must be satisfied (AND across
+   * groups, OR within a group). Use this when `requiresApps` (a flat AND) is too
+   * strict — e.g. `[["web", "mobile"]]` means "needs a web OR mobile client".
+   * Distinct from `targets`: `targets` says where files land; this gates whether
+   * the module may be selected at all.
+   */
+  requiresOneOf: z.array(z.array(z.enum(APPS))).default([]),
   /** modules that must also be present (auto-selected) */
   requires: z.array(z.string()).default([]),
   /** modules that cannot coexist with this one */

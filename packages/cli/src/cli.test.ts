@@ -129,7 +129,15 @@ describe("resolver rejection paths (F26)", () => {
   const mod = (m: Record<string, unknown>) => {
     const d = join(dir, m.id as string);
     mkdirSync(d, { recursive: true });
-    writeFileSync(join(d, "module.json"), JSON.stringify(m));
+    // Give each declared target minimal wiring so the fixture passes the
+    // registry's load-time coherence check (a target with neither template
+    // files nor wiring is rejected as "dead"). These tests drive the resolver,
+    // which ignores wiring, so the content is irrelevant — only its presence.
+    const targets = (m.targets as string[] | undefined) ?? [];
+    const wiring =
+      (m.wiring as Record<string, unknown> | undefined) ??
+      Object.fromEntries(targets.map((t) => [t, { settings: ["# fixture"] }]));
+    writeFileSync(join(d, "module.json"), JSON.stringify({ ...m, wiring }));
   };
   mod({ id: "cap-x", title: "X", targets: ["server"], provides: "cap" });
   mod({ id: "cap-y", title: "Y", targets: ["server"], provides: "cap" });
