@@ -83,6 +83,20 @@ export const ManifestSchema = z.object({
   env: z.record(z.string()).default({}),
   /** per-target wiring (files are copied separately from wiring injection) */
   wiring: z.record(z.enum(TARGETS), WiringForTargetSchema).default({}),
+  /**
+   * Soft-join wiring, keyed by capability. `enhances[cap]` is applied ONLY when
+   * some *other* present module `provides` that capability — so `feedback` can
+   * declare `enhances: { auth: { server: { ... } } }` and gain user attribution
+   * whenever any auth provider is installed, without hard-requiring auth. Keyed
+   * on capability (not module id) so it works with any provider of it. The set
+   * of active enhancements is a pure function of which modules end up installed,
+   * so `create --with a,b`, `create --with a` + `add b`, and `create --with b` +
+   * `add a` all converge to the same wiring. Injected idempotently at anchors,
+   * exactly like `wiring`.
+   */
+  enhances: z
+    .record(z.string(), z.record(z.enum(TARGETS), WiringForTargetSchema))
+    .default({}),
   /** whether this module is offered by default in the interactive picker */
   default: z.boolean().default(false),
   /** notes printed after generation */

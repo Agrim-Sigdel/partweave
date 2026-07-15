@@ -214,6 +214,10 @@ function addModules(
       scaffoldTargets: new Set(),
       wireTargets,
       rootFiles: "none",
+      // Only the delta is wired, but enhancements activate off the FULL set —
+      // so adding `auth` to a project that already has `feedback` applies
+      // feedback's auth soft-join now that its counterpart is present.
+      contextModuleIds: resolved.modules,
     });
   } catch (err) {
     s?.stop("Failed");

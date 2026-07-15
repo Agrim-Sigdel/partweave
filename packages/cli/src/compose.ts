@@ -54,6 +54,15 @@ export interface ComposeOptions {
    * comparing the on-disk file to what we would have generated for `previousApps`.
    */
   previousApps?: AppName[];
+  /**
+   * The FULL set of module ids that will be installed after this run, used only
+   * to decide which `enhances` soft-joins are active. Defaults to
+   * `selection.modules`. On `add-module`, `selection.modules` is just the delta
+   * being wired, so the caller passes the complete resolved set here — otherwise
+   * an enhancement contributed by an already-installed module would be missed
+   * when its counterpart capability arrives.
+   */
+  contextModuleIds?: string[];
 }
 
 /** A target a module declares but that isn't present in the project this run. */
@@ -292,49 +301,93 @@ function buildIndexes(
   return indexes;
 }
 
-function collectMissingAnchors(
-  indexes: Map<TargetName, Map<string, string[]>>,
-  targets: Set<TargetName>,
-  modules: Module[],
-): MissingAnchor[] {
-  const missing: MissingAnchor[] = [];
+/**
+ * One unit of wiring to apply: a `WiringForTarget` bound to a target, with a
+ * `source` label for error messages. Both a module's own `wiring` (base units)
+ * and active `enhances` blocks (enhancement units) reduce to this shape, so the
+ * preflight and injection logic handle them identically.
+ */
+interface WiringUnit {
+  source: string;
+  target: TargetName;
+  wiring: WiringForTarget;
+}
+
+/** A module's own per-target wiring. */
+function baseUnits(modules: Module[]): WiringUnit[] {
+  const units: WiringUnit[] = [];
   for (const mod of modules) {
     for (const t of mod.manifest.targets) {
-      if (!targets.has(t)) continue;
       const wiring = mod.manifest.wiring[t];
-      if (!wiring) continue;
-      const index = indexes.get(t)!;
-      for (const [anchor, lines] of Object.entries(anchorInjections(wiring))) {
-        if (!index.get(anchor)?.length) {
-          missing.push({ module: mod.manifest.id, target: t, anchor, lines });
-        }
+      if (wiring) units.push({ source: mod.manifest.id, target: t, wiring });
+    }
+  }
+  return units;
+}
+
+/**
+ * Active soft-join wiring: a module's `enhances[cap]` blocks, included ONLY when
+ * some OTHER present module provides `cap`. Order-independent — the result is a
+ * pure function of the module *set*, so `create --with a,b`, `create a`+`add b`,
+ * and `create b`+`add a` produce the same enhancement units.
+ */
+function enhancementUnits(contextModules: Module[]): WiringUnit[] {
+  const units: WiringUnit[] = [];
+  for (const mod of contextModules) {
+    for (const [cap, perTarget] of Object.entries(mod.manifest.enhances)) {
+      const providedByOther = contextModules.some(
+        (o) => o.manifest.provides === cap && o.manifest.id !== mod.manifest.id,
+      );
+      if (!providedByOther) continue;
+      for (const [t, wiring] of Object.entries(perTarget)) {
+        if (!wiring) continue;
+        units.push({ source: `${mod.manifest.id} (enhances ${cap})`, target: t as TargetName, wiring });
       }
-      // python deps are injected at <partweave:deps> in pyproject.toml
-      if (t === "server" && wiring.deps?.length && !index.get("deps")?.length) {
-        missing.push({
-          module: mod.manifest.id,
-          target: t,
-          anchor: "deps",
-          lines: wiring.deps.map((d) => `"${d}",`),
-        });
+    }
+  }
+  return units;
+}
+
+function collectMissingUnits(
+  indexes: Map<TargetName, Map<string, string[]>>,
+  targets: Set<TargetName>,
+  units: WiringUnit[],
+): MissingAnchor[] {
+  const missing: MissingAnchor[] = [];
+  for (const u of units) {
+    if (!targets.has(u.target)) continue;
+    const index = indexes.get(u.target)!;
+    for (const [anchor, lines] of Object.entries(anchorInjections(u.wiring))) {
+      if (!index.get(anchor)?.length) {
+        missing.push({ module: u.source, target: u.target, anchor, lines });
       }
+    }
+    // python deps are injected at <partweave:deps> in pyproject.toml
+    if (u.target === "server" && u.wiring.deps?.length && !index.get("deps")?.length) {
+      missing.push({
+        module: u.source,
+        target: u.target,
+        anchor: "deps",
+        lines: u.wiring.deps.map((d) => `"${d}",`),
+      });
     }
   }
   return missing;
 }
 
 /**
- * Every `<partweave:...>` anchor the given modules' wiring needs that is absent
- * from the project at `outDir`. Used as a preflight by `applyWiring` (fail
- * before touching any file) and by `doctor` (verify a user project hasn't lost
- * its anchors before the user hits this during an `add`).
+ * Every `<partweave:...>` anchor the given modules' wiring needs (base wiring
+ * plus any active enhancements among them) that is absent from the project at
+ * `outDir`. Used by `doctor` to verify a user project hasn't lost its anchors.
+ * Pass the FULL installed module set so cross-module enhancements are checked.
  */
 export function findMissingAnchors(
   outDir: string,
   targets: Set<TargetName>,
   modules: Module[],
 ): MissingAnchor[] {
-  return collectMissingAnchors(buildIndexes(outDir, targets), targets, modules);
+  const units = [...baseUnits(modules), ...enhancementUnits(modules)];
+  return collectMissingUnits(buildIndexes(outDir, targets), targets, units);
 }
 
 function missingAnchorError(missing: MissingAnchor[]): PartweaveError {
@@ -358,7 +411,7 @@ function missingAnchorError(missing: MissingAnchor[]): PartweaveError {
 function applyWiring(
   outDir: string,
   targets: Set<TargetName>,
-  modules: Module[],
+  units: WiringUnit[],
   workspaceRange: string,
 ): void {
   // one anchor index per present target directory
@@ -369,39 +422,35 @@ function applyWiring(
   // fix-it list instead of leaving the project partially wired. Pre-existing
   // targets were already checked at the top of compose(); this pass also covers
   // targets scaffolded during this run (a module/_core contract bug).
-  const missing = collectMissingAnchors(indexes, targets, modules);
+  const missing = collectMissingUnits(indexes, targets, units);
   if (missing.length > 0) throw missingAnchorError(missing);
 
-  for (const mod of modules) {
-    for (const t of mod.manifest.targets) {
-      if (!targets.has(t)) continue;
-      const wiring = mod.manifest.wiring[t];
-      if (!wiring) continue;
-      const index = indexes.get(t)!;
-      const targetDir = join(outDir, TARGET_DEST[t]);
+  for (const u of units) {
+    if (!targets.has(u.target)) continue;
+    const index = indexes.get(u.target)!;
+    const targetDir = join(outDir, TARGET_DEST[u.target]);
 
-      // anchor-based wiring
-      for (const [anchor, lines] of Object.entries(anchorInjections(wiring))) {
-        injectIntoFiles(index, anchor, lines, t);
-      }
+    // anchor-based wiring
+    for (const [anchor, lines] of Object.entries(anchorInjections(u.wiring))) {
+      injectIntoFiles(index, anchor, lines, u.target);
+    }
 
-      // dependency merging
-      if (wiring.deps?.length) {
-        if (t === "server") {
-          // Python deps → inject into pyproject's <partweave:deps> anchor, keyed
-          // by distribution name so a package already present (from _core or
-          // another component) is never added a second time with a different
-          // version spec.
-          injectPyDeps(index, wiring.deps, t);
-        } else {
-          const pkgPath = join(targetDir, "package.json");
-          if (existsSync(pkgPath)) {
-            const merged = mergePackageJsonDeps(
-              readFileSync(pkgPath, "utf8"),
-              normalizeWorkspaceDeps(wiring.deps, workspaceRange),
-            );
-            writeFileSync(pkgPath, merged);
-          }
+    // dependency merging
+    if (u.wiring.deps?.length) {
+      if (u.target === "server") {
+        // Python deps → inject into pyproject's <partweave:deps> anchor, keyed
+        // by distribution name so a package already present (from _core or
+        // another component) is never added a second time with a different
+        // version spec.
+        injectPyDeps(index, u.wiring.deps, u.target);
+      } else {
+        const pkgPath = join(targetDir, "package.json");
+        if (existsSync(pkgPath)) {
+          const merged = mergePackageJsonDeps(
+            readFileSync(pkgPath, "utf8"),
+            normalizeWorkspaceDeps(u.wiring.deps, workspaceRange),
+          );
+          writeFileSync(pkgPath, merged);
         }
       }
     }
@@ -495,6 +544,16 @@ export function compose(opts: ComposeOptions): ComposeResult {
   const ctx = buildContext(selection);
   const outDir = selection.outDir;
   const modules = selection.modules.map((id) => registry.require(id));
+  // The full installed set drives enhancement activation; defaults to the
+  // modules being wired (create/plan), overridden on add-module with the
+  // complete resolved set so already-installed enhancers still fire.
+  const contextModules = (opts.contextModuleIds ?? selection.modules).map((id) =>
+    registry.require(id),
+  );
+  // All wiring to apply this run: each wired module's own wiring, plus every
+  // active soft-join among the full installed set. Both go through the same
+  // preflight + injection path.
+  const wiringUnits = [...baseUnits(modules), ...enhancementUnits(contextModules)];
   const written: string[] = [];
 
   // 0. Preflight anchors on targets that already exist on disk (i.e. not being
@@ -504,7 +563,7 @@ export function compose(opts: ComposeOptions): ComposeResult {
   // and are re-checked by applyWiring's own preflight.
   const preExisting = new Set([...wireTargets].filter((t) => !scaffoldTargets.has(t)));
   if (preExisting.size > 0) {
-    const missing = findMissingAnchors(outDir, preExisting, modules);
+    const missing = collectMissingUnits(buildIndexes(outDir, preExisting), preExisting, wiringUnits);
     if (missing.length > 0) throw missingAnchorError(missing);
   }
 
@@ -541,8 +600,9 @@ export function compose(opts: ComposeOptions): ComposeResult {
     }
   }
 
-  // 4. wiring (restricted to the targets being wired)
-  applyWiring(outDir, wireTargets, modules, jsPmProfile(ctx.jsPm).workspaceRange);
+  // 4. wiring (restricted to the targets being wired) — base wiring for the
+  // modules being wired, plus any active soft-join enhancements.
+  applyWiring(outDir, wireTargets, wiringUnits, jsPmProfile(ctx.jsPm).workspaceRange);
 
   // 5. env — one .env(.example) pair per app, only when root files are in scope
   if (rootFiles !== "none") written.push(...writeEnvFiles(outDir, ctx, modules));
