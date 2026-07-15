@@ -38,3 +38,6 @@ venv/
 
 # private notes / scratch — personal, never committed or shared
 /notes/
+
+# graphify local knowledge-graph output
+graphify-out/

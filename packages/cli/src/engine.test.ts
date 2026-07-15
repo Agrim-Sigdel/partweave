@@ -2,7 +2,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { buildContext, compose, selectedTargets } from "./compose.js";
+import { buildContext, compose, findMissingAnchors, selectedTargets } from "./compose.js";
+import { PartweaveError } from "./errors.js";
 import {
   appendEnv,
   higherVersion,
@@ -276,5 +277,76 @@ describe("create-then-add-app scaffolds and re-wires without clobbering edits (F
     expect(existsSync(`${makefile}.partweave-new`)).toBe(true);
     // …with a note telling the user what happened.
     expect(result.notes.some((n) => n.includes("Makefile") && n.includes(".partweave-new"))).toBe(true);
+  });
+});
+
+describe("lost anchors abort atomically with a fix-it list (anchor durability)", () => {
+  const registry = new Registry();
+  const dirs: string[] = [];
+  afterAll(() => dirs.forEach((d) => rmSync(d, { recursive: true, force: true })));
+
+  const sel = (dir: string, modules: string[]): Selection => ({
+    projectName: "anchors",
+    outDir: dir,
+    apps: ["server"],
+    modules,
+    jsPm: "pnpm",
+    pyPm: "uv",
+  });
+
+  const scaffoldServer = (): string => {
+    const dir = mkdtempSync(join(tmpdir(), "pw-anchor-"));
+    dirs.push(dir);
+    const create = sel(dir, []);
+    const targets = selectedTargets(buildContext(create));
+    compose({ selection: create, registry, scaffoldTargets: targets, wireTargets: targets, rootFiles: "all" });
+    return dir;
+  };
+
+  it("finds no missing anchors in a fresh scaffold", () => {
+    const dir = scaffoldServer();
+    const add = sel(dir, ["storage"]);
+    const modules = add.modules.map((id) => registry.require(id));
+    expect(findMissingAnchors(dir, selectedTargets(buildContext(add)), modules)).toEqual([]);
+  });
+
+  it("reports a user-deleted anchor, and the failed add modifies nothing", () => {
+    const dir = scaffoldServer();
+    const settings = join(dir, "apps/server/config/settings.py");
+    const urls = join(dir, "apps/server/config/urls.py");
+
+    // simulate the user deleting the settings anchor from their settings.py
+    writeFileSync(
+      settings,
+      readFileSync(settings, "utf8").replace(/^.*<partweave:settings>.*\n/m, ""),
+    );
+    const settingsBefore = readFileSync(settings, "utf8");
+    const urlsBefore = readFileSync(urls, "utf8");
+
+    const add = sel(dir, ["storage"]);
+    const modules = add.modules.map((id) => registry.require(id));
+    const targets = selectedTargets(buildContext(add));
+
+    // doctor's view: the lost anchor is reported with the module that needs it
+    const missing = findMissingAnchors(dir, targets, modules);
+    expect(missing).toHaveLength(1);
+    expect(missing[0]).toMatchObject({ module: "storage", target: "server", anchor: "settings" });
+    expect(missing[0].lines.length).toBeGreaterThan(0);
+
+    // the add aborts as a typed error BEFORE copying or wiring anything
+    try {
+      compose({ selection: add, registry, scaffoldTargets: new Set(), wireTargets: targets, rootFiles: "none" });
+      expect.unreachable();
+    } catch (err) {
+      const pe = err as PartweaveError;
+      expect(pe.kind).toBe("missing-anchor");
+      expect(pe.exitCode).toBe(12);
+      expect(pe.message).toMatch(/<partweave:settings>/);
+      expect(pe.details?.missing).toHaveLength(1);
+    }
+    // atomic: no partial wiring, no module files copied
+    expect(readFileSync(settings, "utf8")).toBe(settingsBefore);
+    expect(readFileSync(urls, "utf8")).toBe(urlsBefore);
+    expect(existsSync(join(dir, "apps/server/storage"))).toBe(false);
   });
 });

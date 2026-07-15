@@ -1,11 +1,13 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { join, parse } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { serializeCatalog } from "./catalog.js";
-import { EXIT_CODES, PartweaveError, toPartweaveError } from "./errors.js";
+import { EXIT_CODES, PartweaveError, toIoError, toPartweaveError } from "./errors.js";
+import { protectedDirReason } from "./fsutil.js";
 import { ENVELOPE_VERSION, errEnvelope, okEnvelope } from "./output.js";
 import { readVersion } from "./paths.js";
+import { projectNameError } from "./render.js";
 import { Registry } from "./registry.js";
 import { resolveModules, validateApps } from "./resolve.js";
 
@@ -17,6 +19,7 @@ describe("error taxonomy", () => {
     expect(new PartweaveError("missing-app", "x").exitCode).toBe(5);
     expect(new PartweaveError("dir-exists", "x").exitCode).toBe(6);
     expect(new PartweaveError("not-a-project", "x").exitCode).toBe(7);
+    expect(new PartweaveError("missing-anchor", "x").exitCode).toBe(12);
     expect(new PartweaveError("internal", "x").exitCode).toBe(1);
   });
 
@@ -167,5 +170,59 @@ describe("resolver rejection paths (F26)", () => {
       expect((err as PartweaveError).message).toMatch(/Circular/);
       expect((err as PartweaveError).details?.cycle).toBeDefined();
     }
+  });
+});
+
+describe("project name validation (guards the outDir derivation)", () => {
+  it("accepts a normal name", () => {
+    expect(projectNameError("My App")).toBeUndefined();
+  });
+
+  it("rejects empty / whitespace-only names", () => {
+    expect(projectNameError("")).toMatch(/required/i);
+    expect(projectNameError("   ")).toMatch(/required/i);
+  });
+
+  it("rejects a name that slugifies to nothing (would target the cwd)", () => {
+    expect(projectNameError("!!!")).toMatch(/letters or digits/);
+    expect(projectNameError("---")).toMatch(/letters or digits/);
+  });
+
+  it("rejects names over 64 characters", () => {
+    expect(projectNameError("x".repeat(65))).toMatch(/64/);
+  });
+});
+
+describe("protected directory guard (--force must not delete these)", () => {
+  it("protects the filesystem root and the home directory", () => {
+    expect(protectedDirReason(parse(process.cwd()).root)).toMatch(/filesystem root/);
+    expect(protectedDirReason(homedir())).toMatch(/home directory/);
+  });
+
+  it("protects the cwd and its ancestors", () => {
+    expect(protectedDirReason(process.cwd())).toMatch(/current working directory/);
+    expect(protectedDirReason(join(process.cwd(), ".."))).toMatch(/ancestor/);
+  });
+
+  it("allows an ordinary sibling/child target", () => {
+    expect(protectedDirReason(join(process.cwd(), "some-new-project"))).toBeNull();
+    expect(protectedDirReason(mkdtempSync(join(tmpdir(), "pw-guard-")))).toBeNull();
+  });
+});
+
+describe("toIoError classifies filesystem failures", () => {
+  it("maps errno failures to io (exit 8) with the action as context", () => {
+    const enoent = Object.assign(new Error("ENOENT: no such file"), { code: "ENOENT" });
+    const err = toIoError(enoent, "Scaffolding failed");
+    expect(err.kind).toBe("io");
+    expect(err.exitCode).toBe(EXIT_CODES.io);
+    expect(err.message).toMatch(/^Scaffolding failed: /);
+    expect(err.details?.code).toBe("ENOENT");
+  });
+
+  it("passes PartweaveErrors through and wraps unknown errors as internal", () => {
+    const pe = new PartweaveError("dir-exists", "taken");
+    expect(toIoError(pe, "x")).toBe(pe);
+    expect(toIoError(new Error("logic bug"), "x").kind).toBe("internal");
   });
 });

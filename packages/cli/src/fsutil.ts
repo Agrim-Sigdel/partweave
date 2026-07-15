@@ -7,12 +7,29 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { homedir } from "node:os";
+import { dirname, join, parse, relative, resolve, sep } from "node:path";
 import { isBinaryPath, render } from "./render.js";
 import type { RenderContext } from "./types.js";
 
 export function ensureDir(dir: string): void {
   mkdirSync(dir, { recursive: true });
+}
+
+/**
+ * Why `dir` must never be deleted wholesale (even with --force), or null if
+ * replacing it is fine: the filesystem root, the user's home directory, the
+ * process cwd, or an ancestor of the cwd. Deleting an ancestor of the cwd
+ * (or the cwd itself) invalidates the running process's working directory.
+ */
+export function protectedDirReason(dir: string): string | null {
+  const target = resolve(dir);
+  if (target === parse(target).root) return "the filesystem root";
+  if (target === resolve(homedir())) return "your home directory";
+  const cwd = process.cwd();
+  if (target === cwd) return "the current working directory";
+  if (cwd.startsWith(target + sep)) return "an ancestor of the current working directory";
+  return null;
 }
 
 export function readIfExists(p: string): string | null {

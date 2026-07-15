@@ -8,6 +8,7 @@ import {
   text,
 } from "@clack/prompts";
 import pc from "picocolors";
+import { existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   detectJsPm,
@@ -17,7 +18,7 @@ import {
   type PyPm,
 } from "./pm.js";
 import type { Registry } from "./registry.js";
-import { slugify } from "./render.js";
+import { projectNameError, slugify } from "./render.js";
 import { APPS, type AppName, type TargetName } from "./types.js";
 
 export interface RawChoices {
@@ -43,12 +44,13 @@ function bail<T>(v: T | symbol): asserts v is T {
 export async function promptCreate(
   registry: Registry,
   defaults: Partial<RawChoices>,
+  opts: { force?: boolean } = {},
 ): Promise<RawChoices> {
   const nameRaw = await text({
     message: "Project name",
     placeholder: "my-project",
     initialValue: defaults.projectName ?? "",
-    validate: (v) => (v.trim() ? undefined : "Required"),
+    validate: projectNameError,
   });
   bail(nameRaw);
   const projectName = nameRaw.trim();
@@ -56,7 +58,22 @@ export async function promptCreate(
   const dirRaw = await text({
     message: "Target directory",
     initialValue: defaults.outDir ?? `./${slugify(projectName)}`,
-    validate: (v) => (v.trim() ? undefined : "Required"),
+    // Reject an occupied target here, at the prompt, instead of letting the
+    // user answer every remaining question and then fail on the dir guard.
+    // --force skips this — the user has already said they want to replace it.
+    validate: (v) => {
+      if (!v.trim()) return "Required";
+      if (opts.force) return undefined;
+      const dir = resolve(v.trim());
+      try {
+        if (existsSync(dir) && readdirSync(dir).length > 0) {
+          return `${dir} already exists and is not empty — pick another directory (or rerun with --force).`;
+        }
+      } catch {
+        // Unreadable path (permissions, etc.) — let `create` surface the real io error.
+      }
+      return undefined;
+    },
   });
   bail(dirRaw);
   const outDir = resolve(dirRaw.trim());

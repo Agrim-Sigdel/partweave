@@ -1,12 +1,13 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { PartweaveError } from "./errors.js";
 import {
   injectAtAnchor,
   mergePackageJsonDeps,
   normalizeWorkspaceDeps,
   pyDepName,
 } from "./inject.js";
-import { copyTree, listFiles, readIfExists, writeFileEnsured } from "./fsutil.js";
+import { copyTree, readIfExists, writeFileEnsured } from "./fsutil.js";
 import { DEFAULT_JS_PM, DEFAULT_PY_PM, jsPmProfile } from "./pm.js";
 import type { Registry } from "./registry.js";
 import { isBinaryPath, slugify } from "./render.js";
@@ -100,22 +101,48 @@ const COPY_ORDER: TargetName[] = [
   "api-client",
 ];
 
+/**
+ * Installed/derived directories that can never contain our anchors. `add` and
+ * `doctor` scan a live user project — without this, the walk crawls
+ * node_modules and virtualenvs.
+ */
+const ANCHOR_SCAN_IGNORE = new Set([
+  "node_modules",
+  ".git",
+  ".venv",
+  "venv",
+  "__pycache__",
+  ".next",
+  ".expo",
+  ".turbo",
+  "dist",
+  "build",
+]);
+
 /** Scan a directory tree for `<partweave:id>` anchors → the files that contain them. */
 function buildAnchorIndex(dir: string): Map<string, string[]> {
   const index = new Map<string, string[]>();
   const re = /<partweave:([\w-]+)>/g;
-  for (const rel of listFiles(dir)) {
-    const abs = join(dir, rel);
-    if (isBinaryPath(abs)) continue;
-    const content = readFileSync(abs, "utf8");
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(content))) {
-      const id = m[1];
-      const arr = index.get(id) ?? [];
-      if (!arr.includes(abs)) arr.push(abs);
-      index.set(id, arr);
+  const walk = (d: string): void => {
+    for (const name of readdirSync(d)) {
+      if (ANCHOR_SCAN_IGNORE.has(name)) continue;
+      const abs = join(d, name);
+      if (statSync(abs).isDirectory()) {
+        walk(abs);
+        continue;
+      }
+      if (isBinaryPath(abs)) continue;
+      const content = readFileSync(abs, "utf8");
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(content))) {
+        const id = m[1];
+        const arr = index.get(id) ?? [];
+        if (!arr.includes(abs)) arr.push(abs);
+        index.set(id, arr);
+      }
     }
-  }
+  };
+  if (existsSync(dir)) walk(dir);
   return index;
 }
 
@@ -186,6 +213,89 @@ function injectPyDeps(
   }
 }
 
+/** An anchor a module's wiring needs that is absent from the target tree. */
+export interface MissingAnchor {
+  module: string;
+  target: TargetName;
+  anchor: string;
+  /** the lines that would have been injected at the anchor */
+  lines: string[];
+}
+
+function buildIndexes(
+  outDir: string,
+  targets: Set<TargetName>,
+): Map<TargetName, Map<string, string[]>> {
+  const indexes = new Map<TargetName, Map<string, string[]>>();
+  for (const t of targets) {
+    indexes.set(t, buildAnchorIndex(join(outDir, TARGET_DEST[t])));
+  }
+  return indexes;
+}
+
+function collectMissingAnchors(
+  indexes: Map<TargetName, Map<string, string[]>>,
+  targets: Set<TargetName>,
+  modules: Module[],
+): MissingAnchor[] {
+  const missing: MissingAnchor[] = [];
+  for (const mod of modules) {
+    for (const t of mod.manifest.targets) {
+      if (!targets.has(t)) continue;
+      const wiring = mod.manifest.wiring[t];
+      if (!wiring) continue;
+      const index = indexes.get(t)!;
+      for (const [anchor, lines] of Object.entries(anchorInjections(wiring))) {
+        if (!index.get(anchor)?.length) {
+          missing.push({ module: mod.manifest.id, target: t, anchor, lines });
+        }
+      }
+      // python deps are injected at <partweave:deps> in pyproject.toml
+      if (t === "server" && wiring.deps?.length && !index.get("deps")?.length) {
+        missing.push({
+          module: mod.manifest.id,
+          target: t,
+          anchor: "deps",
+          lines: wiring.deps.map((d) => `"${d}",`),
+        });
+      }
+    }
+  }
+  return missing;
+}
+
+/**
+ * Every `<partweave:...>` anchor the given modules' wiring needs that is absent
+ * from the project at `outDir`. Used as a preflight by `applyWiring` (fail
+ * before touching any file) and by `doctor` (verify a user project hasn't lost
+ * its anchors before the user hits this during an `add`).
+ */
+export function findMissingAnchors(
+  outDir: string,
+  targets: Set<TargetName>,
+  modules: Module[],
+): MissingAnchor[] {
+  return collectMissingAnchors(buildIndexes(outDir, targets), targets, modules);
+}
+
+function missingAnchorError(missing: MissingAnchor[]): PartweaveError {
+  const blocks = missing.map(
+    (m) =>
+      `  ${m.module} → ${m.target}: <partweave:${m.anchor}> not found` +
+      (m.lines.length ? `\n${m.lines.map((l) => `      ${l}`).join("\n")}` : ""),
+  );
+  return new PartweaveError(
+    "missing-anchor",
+    `${missing.length} wiring anchor(s) are missing — nothing was changed.\n` +
+      `${blocks.join("\n")}\n` +
+      `Restore each anchor comment (e.g. \`# <partweave:urls>\`) where the module's ` +
+      `lines belong, or add the lines shown above manually and re-run. ` +
+      `\`partweave doctor\` verifies anchors. (In a freshly generated project this ` +
+      `means the module expects an anchor the _core scaffold doesn't ship.)`,
+    { missing },
+  );
+}
+
 function applyWiring(
   outDir: string,
   targets: Set<TargetName>,
@@ -193,10 +303,15 @@ function applyWiring(
   workspaceRange: string,
 ): void {
   // one anchor index per present target directory
-  const indexes = new Map<TargetName, Map<string, string[]>>();
-  for (const t of targets) {
-    indexes.set(t, buildAnchorIndex(join(outDir, TARGET_DEST[t])));
-  }
+  const indexes = buildIndexes(outDir, targets);
+
+  // Preflight: verify every anchor this pass needs before modifying any file,
+  // so a lost anchor (deleted from a user-owned file) aborts with a complete
+  // fix-it list instead of leaving the project partially wired. Pre-existing
+  // targets were already checked at the top of compose(); this pass also covers
+  // targets scaffolded during this run (a module/_core contract bug).
+  const missing = collectMissingAnchors(indexes, targets, modules);
+  if (missing.length > 0) throw missingAnchorError(missing);
 
   for (const mod of modules) {
     for (const t of mod.manifest.targets) {
@@ -322,6 +437,17 @@ export function compose(opts: ComposeOptions): ComposeResult {
   const outDir = selection.outDir;
   const modules = selection.modules.map((id) => registry.require(id));
   const written: string[] = [];
+
+  // 0. Preflight anchors on targets that already exist on disk (i.e. not being
+  // scaffolded this run) BEFORE writing any file, so an `add` into a project
+  // that lost an anchor aborts with nothing copied and nothing modified.
+  // Freshly scaffolded targets get their anchors from the _core copy in step 1
+  // and are re-checked by applyWiring's own preflight.
+  const preExisting = new Set([...wireTargets].filter((t) => !scaffoldTargets.has(t)));
+  if (preExisting.size > 0) {
+    const missing = findMissingAnchors(outDir, preExisting, modules);
+    if (missing.length > 0) throw missingAnchorError(missing);
+  }
 
   // 1. scaffold bare _core for new targets
   for (const t of COPY_ORDER) {

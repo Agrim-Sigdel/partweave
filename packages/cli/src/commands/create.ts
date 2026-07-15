@@ -15,11 +15,12 @@ import {
   type PyPm,
 } from "../pm.js";
 import { ensureJsPm, ensurePyPm } from "../preflight.js";
-import { PartweaveError } from "../errors.js";
+import { PartweaveError, toIoError } from "../errors.js";
+import { protectedDirReason } from "../fsutil.js";
 import { emitError, emitSuccess } from "../output.js";
 import { Registry } from "../registry.js";
 import { writeProjectManifest } from "../projectmanifest.js";
-import { slugify } from "../render.js";
+import { projectNameError, slugify } from "../render.js";
 import { resolveModules, validateApps } from "../resolve.js";
 import { promptCreate, type RawChoices } from "../prompts.js";
 import { APPS, type AppName } from "../types.js";
@@ -141,6 +142,10 @@ async function createInner(flags: CreateFlags, json: boolean): Promise<void> {
   if (nonInteractive) {
     const apps = flagApps ?? [...APPS];
     const name = flags.name ?? "my-app";
+    const nameProblem = projectNameError(name);
+    if (nameProblem) {
+      throw new PartweaveError("usage", `Invalid --name: ${nameProblem}`, { name });
+    }
     const outDir = resolve(flags.dir ?? `./${slugify(name)}`);
     const modules =
       flags.with !== undefined
@@ -148,14 +153,18 @@ async function createInner(flags: CreateFlags, json: boolean): Promise<void> {
         : defaultModules(registry, apps);
     choices = { projectName: name, outDir, apps, modules, jsPm, pyPm };
   } else {
-    choices = await promptCreate(registry, {
-      projectName: flags.name,
-      outDir: flags.dir ? resolve(flags.dir) : undefined,
-      // pre-select an explicitly-passed --js-pm/--py-pm; otherwise the prompt
-      // defaults to whatever is installed.
-      jsPm: flags.jsPm ? jsPm : undefined,
-      pyPm: flags.pyPm ? pyPm : undefined,
-    });
+    choices = await promptCreate(
+      registry,
+      {
+        projectName: flags.name,
+        outDir: flags.dir ? resolve(flags.dir) : undefined,
+        // pre-select an explicitly-passed --js-pm/--py-pm; otherwise the prompt
+        // defaults to whatever is installed.
+        jsPm: flags.jsPm ? jsPm : undefined,
+        pyPm: flags.pyPm ? pyPm : undefined,
+      },
+      { force: flags.force },
+    );
   }
 
   // guard: don't clobber a non-empty directory
@@ -164,6 +173,22 @@ async function createInner(flags: CreateFlags, json: boolean): Promise<void> {
       "dir-exists",
       `${choices.outDir} exists and is not empty. Use --force to override.`,
       { dir: choices.outDir },
+    );
+  }
+  // guard: --force replaces the target wholesale, which must never apply to a
+  // directory the process lives in (or above), $HOME, or the filesystem root.
+  const protectedTarget = protectedDirReason(choices.outDir);
+  if (
+    flags.force &&
+    protectedTarget &&
+    existsSync(choices.outDir) &&
+    readdirSync(choices.outDir).length > 0
+  ) {
+    throw new PartweaveError(
+      "usage",
+      `Refusing to replace ${choices.outDir} — it is ${protectedTarget}. ` +
+        `Choose a different directory, or empty it yourself first.`,
+      { dir: choices.outDir, reason: protectedTarget },
     );
   }
 
@@ -200,8 +225,14 @@ async function createInner(flags: CreateFlags, json: boolean): Promise<void> {
   // mid-scaffold failure never leaves half-written debris in the target (F22).
   // A same-filesystem sibling makes the rename atomic (no cross-device copy).
   const parent = dirname(choices.outDir);
-  mkdirSync(parent, { recursive: true });
-  const tmp = mkdtempSync(join(parent, ".partweave-tmp-"));
+  let tmp: string;
+  try {
+    mkdirSync(parent, { recursive: true });
+    tmp = mkdtempSync(join(parent, ".partweave-tmp-"));
+  } catch (err) {
+    s?.stop("Failed");
+    throw toIoError(err, `Couldn't create a working directory under ${parent}`);
+  }
   let result;
   try {
     const selection = {
@@ -230,12 +261,27 @@ async function createInner(flags: CreateFlags, json: boolean): Promise<void> {
     // Move into place. With --force we replace an existing target (F23 — no more
     // merging onto a populated dir); the non-empty guard above already rejected a
     // populated target when --force was absent.
-    if (existsSync(choices.outDir)) rmSync(choices.outDir, { recursive: true, force: true });
-    renameSync(tmp, choices.outDir);
+    if (existsSync(choices.outDir)) {
+      if (protectedTarget) {
+        // A protected target that got this far is empty (e.g. `--dir .` in an
+        // empty cwd). Move the scaffold's contents in rather than deleting and
+        // recreating the directory node — deleting the cwd invalidates the
+        // running process's (and the user's shell's) working directory.
+        for (const entry of readdirSync(tmp)) {
+          renameSync(join(tmp, entry), join(choices.outDir, entry));
+        }
+        rmSync(tmp, { recursive: true, force: true });
+      } else {
+        rmSync(choices.outDir, { recursive: true, force: true });
+        renameSync(tmp, choices.outDir);
+      }
+    } else {
+      renameSync(tmp, choices.outDir);
+    }
   } catch (err) {
     rmSync(tmp, { recursive: true, force: true });
     s?.stop("Failed");
-    throw err;
+    throw toIoError(err, "Scaffolding failed");
   }
   s?.stop(`Created ${result.written.length} files`);
 
