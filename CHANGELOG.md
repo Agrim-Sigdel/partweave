@@ -8,6 +8,8 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-21
+
 ### Security
 - **Storage path-traversal fix (F21/S0.3).** The `storage` module now validates every
   object key: `..` segments, absolute paths, and drive-letter/UNC keys are rejected
@@ -16,6 +18,17 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
   root. Applies to the S3 backend too. Guarded by new pytest cases.
 
 ### Fixed
+- **The published package now ships the module catalog (install was broken for everyone but
+  the maintainer).** 0.5.0 moved the catalog to a GitHub clone on first run, but that code
+  path never runs in this monorepo — `findModulesDir()` finds the repo-root `modules/` first —
+  so it was only ever exercised on users' machines. Any environment where the clone failed
+  (no `git` installed, proxy, firewall, offline) got an opaque `Failed to clone registry`,
+  and an interrupted clone left a cache that poisoned every later run with
+  `Could not locate the modules/ catalog`. The catalog (~50 KB gzipped) now ships inside the
+  tarball, so `create` works with no git and no network. `--update` still refreshes from GitHub.
+- **Registry fetch hardening** (still used by `--update`): the cache is validated by
+  `modules/_core` rather than `.git`, clones stage into a temp dir and are renamed in
+  atomically, and git's stderr is surfaced instead of discarded — a missing `git` now says so.
 - **`add <app>` no longer clobbers hand-edited root files (F4/S0.4).** When you add an app,
   structural root files (`package.json`, `pnpm-workspace.yaml`, `turbo.json`,
   `tsconfig.base.json`, `scripts/run.mjs`, `Makefile`) are regenerated for the new app set —
@@ -145,7 +158,8 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 - Initial published release (under the former `quick-build` name).
 
-[Unreleased]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/Agrim-Sigdel/partweave/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Agrim-Sigdel/partweave/compare/v0.5.0...v0.6.0
 [0.3.3]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.0...v0.3.1
