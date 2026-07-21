@@ -39,6 +39,7 @@
   },
   "files": [
     "dist/**/*.js",
+    "modules/**",
     "README.md",
     "LICENSE",
     "NOTICE"

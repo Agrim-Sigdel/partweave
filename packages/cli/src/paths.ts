@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { REGISTRY_DIR } from "./fetcher.js";
+import { REGISTRY_DIR, registryWasRefreshed } from "./fetcher.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -47,6 +47,17 @@ export function findModulesDir(): string {
     throw new Error(`PARTWEAVE_MODULES_DIR=${override} has no _core/ inside it`);
   }
 
+  const registryModules = join(REGISTRY_DIR, "modules");
+
+  // A catalog explicitly fetched this run (`--update`) outranks the one bundled
+  // into the package — otherwise the user downloads a newer catalog and we go on
+  // silently serving the shipped one.
+  if (registryWasRefreshed() && existsSync(join(registryModules, "_core"))) {
+    return registryModules;
+  }
+
+  // The catalog bundled inside the published package, or the repo-root modules/
+  // when running from a checkout. This is the normal path and needs no network.
   let cur = here;
   for (let i = 0; i < 8; i++) {
     const candidate = join(cur, "modules");
@@ -57,7 +68,6 @@ export function findModulesDir(): string {
   }
 
   // Fallback to the global registry cache (populated by fetcher.ts)
-  const registryModules = join(REGISTRY_DIR, "modules");
   if (existsSync(join(registryModules, "_core"))) return registryModules;
 
   throw new Error(
