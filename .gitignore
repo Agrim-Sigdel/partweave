@@ -41,3 +41,6 @@ venv/
 
 # graphify local knowledge-graph output
 graphify-out/
+
+# curated architecture docs — kept locally, not committed
+/project-insight/

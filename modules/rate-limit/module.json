@@ -1,0 +1,20 @@
+{
+  "id": "rate-limit",
+  "title": "Endpoint Throttling",
+  "description": "Rate limiting presets using DRF throttling, Redis buckets, and bruteforce protection.",
+  "kind": "feature",
+  "targets": ["server"],
+  "requiresApps": ["server"],
+  "requires": ["cache-redis"],
+  "files": [
+    "server/core/throttling.py",
+    "server/core/rate_limit_middleware.py"
+  ],
+  "wiring": {
+    "server": {
+      "anchors": {
+        "settings_rest_framework": ["    \"DEFAULT_THROTTLE_CLASSES\": [\"core.throttling.BurstRateThrottle\", \"core.throttling.SustainedRateThrottle\"],\n    \"DEFAULT_THROTTLE_RATES\": {\"burst\": \"60/min\", \"sustained\": \"1000/day\"},"]
+      }
+    }
+  }
+}

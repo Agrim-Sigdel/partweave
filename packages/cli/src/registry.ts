@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { checkCoherence, nearestId } from "./contract.js";
 import { PartweaveError } from "./errors.js";
@@ -41,7 +41,28 @@ export class Registry {
           `Module dir "${name}" does not match manifest id "${parsed.data.id}"`,
         );
       }
-      this.byId.set(parsed.data.id, { manifest: parsed.data, dir });
+      let changelog: Array<{ version: string; changes: string[] }> | undefined = undefined;
+      const changelogPath = join(dir, "CHANGELOG.md");
+      if (existsSync(changelogPath)) {
+        try {
+          const content = readFileSync(changelogPath, "utf8");
+          const lines = content.split('\n');
+          changelog = [];
+          let currentVersion = "";
+          let currentChanges: string[] = [];
+          for (const line of lines) {
+            if (line.startsWith("## [")) {
+              if (currentVersion) changelog.push({ version: currentVersion, changes: currentChanges });
+              currentVersion = line.replace("## [", "").split("]")[0] || "Unreleased";
+              currentChanges = [];
+            } else if (line.startsWith("- ") && currentVersion) {
+              currentChanges.push(line.slice(2).trim());
+            }
+          }
+          if (currentVersion) changelog.push({ version: currentVersion, changes: currentChanges });
+        } catch {}
+      }
+      this.byId.set(parsed.data.id, { manifest: parsed.data, dir, changelog });
     }
 
     // Second pass: coherence. The schema proves each manifest is well-typed;

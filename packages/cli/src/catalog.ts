@@ -20,6 +20,8 @@ export interface CatalogModule {
   default: boolean;
   /** env key → default value contributed to the consuming app's .env(.example) */
   env: Record<string, string>;
+  options: Record<string, { type: "boolean" | "string", default: boolean | string, description?: string }>;
+  changelog?: Array<{ version: string; changes: string[] }>;
   notes: string[];
 }
 
@@ -30,9 +32,7 @@ export interface Catalog {
   modules: CatalogModule[];
 }
 
-function serializeModule(m: {
-  manifest: import("./types.js").Manifest;
-}): CatalogModule {
+function serializeModule(m: import("./types.js").Module): CatalogModule {
   const man = m.manifest;
   return {
     id: man.id,
@@ -46,6 +46,8 @@ function serializeModule(m: {
     ...(man.provides ? { provides: man.provides } : {}),
     default: man.default,
     env: man.env,
+    options: man.options,
+    changelog: m.changelog,
     notes: man.notes,
   };
 }

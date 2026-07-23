@@ -1,0 +1,23 @@
+{
+  "id": "audit-log",
+  "title": "Audit Logging",
+  "description": "Immutable security logging for tracking user actions and resource changes.",
+  "kind": "feature",
+  "targets": ["server"],
+  "requiresApps": ["server"],
+  "requires": ["auth"],
+  "files": [
+    "server/core/audit_log/models.py",
+    "server/core/audit_log/middleware.py",
+    "server/core/audit_log/admin.py",
+    "server/core/audit_log/apps.py"
+  ],
+  "wiring": {
+    "server": {
+      "anchors": {
+        "settings_installed_apps": ["    \"core.audit_log\","],
+        "settings_middleware": ["    \"core.audit_log.middleware.AuditLogMiddleware\","]
+      }
+    }
+  }
+}

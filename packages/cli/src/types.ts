@@ -99,6 +99,12 @@ export const ManifestSchema = z.object({
     .default({}),
   /** whether this module is offered by default in the interactive picker */
   default: z.boolean().default(false),
+  /** options that allow conditional extraction */
+  options: z.record(z.object({
+    type: z.enum(["boolean", "string"]),
+    default: z.union([z.boolean(), z.string()]),
+    description: z.string().optional()
+  })).default({}),
   /** notes printed after generation */
   notes: z.array(z.string()).default([]),
 });
@@ -108,6 +114,7 @@ export type Manifest = z.infer<typeof ManifestSchema>;
 export interface Module {
   manifest: Manifest;
   dir: string;
+  changelog?: Array<{ version: string; changes: string[] }>;
 }
 
 /** The fully-resolved choice the composer acts on. */
@@ -123,6 +130,8 @@ export interface Selection {
   jsPm?: JsPm;
   /** Python package manager for the server (defaults to uv) */
   pyPm?: PyPm;
+  /** Chosen module options, keyed by module ID */
+  options?: Record<string, Record<string, string | boolean>>;
 }
 
 /** Template variables available to every copied text file via {{token}}. */

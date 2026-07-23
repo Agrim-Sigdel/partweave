@@ -8,6 +8,12 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+### Module Catalog Changes
+- **`rbac`** (New Module): Role-Based Access Control boilerplate with decorators and permission classes.
+- **`rate-limit`** (New Module): Throttling presets (Burst/Sustained) for endpoints.
+- **`audit-log`** (New Module): Immutable security logging for requests and state changes.
+
+
 ## [0.6.0] - 2026-07-21
 
 ### Security

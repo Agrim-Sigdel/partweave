@@ -4,12 +4,13 @@ import { runCreate, type CreateFlags } from "./commands/create.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runExtract } from "./commands/extract.js";
 import { runList } from "./commands/list.js";
+import { runExplore } from "./commands/explore.js";
 import { runPlan } from "./commands/plan.js";
 import { toPartweaveError } from "./errors.js";
 import { readVersion, hasLocalModules } from "./paths.js";
 import { ensureRegistry } from "./fetcher.js";
 
-export { runCreate, runAdd, runDoctor, runExtract, runList, runPlan };
+export { runCreate, runAdd, runDoctor, runExtract, runList, runExplore, runPlan };
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -79,6 +80,14 @@ export function buildProgram(): Command {
     .option("--json", "emit the catalog as a JSON envelope")
     .action(async (opts: { json?: boolean }) => {
       await runList(opts);
+    });
+
+  program
+    .command("explore")
+    .description("Interactive module discovery and addition with changelogs")
+    .option("--json", "emit the catalog as a JSON envelope for agents")
+    .action(async (opts: { json?: boolean }) => {
+      await runExplore(opts);
     });
 
   program

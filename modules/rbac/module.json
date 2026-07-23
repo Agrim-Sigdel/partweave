@@ -1,0 +1,23 @@
+{
+  "id": "rbac",
+  "title": "Role-Based Access Control",
+  "description": "Enterprise RBAC with @has_permission decorators, Django Admin integration, and client UI guards.",
+  "kind": "feature",
+  "targets": ["server"],
+  "requiresApps": ["server"],
+  "requires": ["auth"],
+  "files": [
+    "server/core/rbac/models.py",
+    "server/core/rbac/permissions.py",
+    "server/core/rbac/decorators.py",
+    "server/core/rbac/admin.py",
+    "server/core/rbac/apps.py"
+  ],
+  "wiring": {
+    "server": {
+      "anchors": {
+        "settings_installed_apps": ["    \"core.rbac\","]
+      }
+    }
+  }
+}
