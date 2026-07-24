@@ -1,12 +1,12 @@
-# Feature catalog — build once, include everywhere
+# Feature catalog: build once, include everywhere
 
 The point of `partweave` is that the boilerplate you'd otherwise rewrite in every project lives here
 **once**, as a selectable component. You add it with a checkbox (or `--with`), you own the code,
 and it's built on swappable interfaces so you can change the implementation without a rewrite.
 
 This page is the menu: what's **available now**, and a concrete **roadmap** of components worth
-adding — each written as a mini-spec (what it provides, which apps it touches, what it depends
-on) so it can be built by dropping a folder into `modules/`. See
+adding, each written as a mini-spec (what it provides, which apps it touches, what it depends
+on), so it can be built by dropping a folder into `modules/`. See
 [authoring-a-module.md](authoring-a-module.md) to build one.
 
 Legend: `[built]` available now · `[planned]` on the roadmap (spec below, not built yet)
@@ -20,9 +20,10 @@ Legend: `[built]` available now · `[planned]` on the roadmap (spec below, not b
 | [built] `db-postgres` | Postgres wiring + driver | server | provides `database` |
 | [built] `auth` | Register/login/refresh/JWT, custom user, `TokenStore` on clients | server, web, mobile, shared | provides `auth`; requires `db-postgres` |
 | [built] `example` | A working screen proving the client↔server round-trip | web, mobile | requires `auth` |
-| [built] `docker` | Local Postgres compose + prod server image | server, root | — |
-| [built] `ci` | Per-app GitHub Actions (path-filtered) | root | — |
+| [built] `docker` | Local Postgres compose + prod server image | server, root | n/a |
+| [built] `ci` | Per-app GitHub Actions (path-filtered) | root | n/a |
 | [built] `storage` | `StorageProvider` ABC + Local/S3 (the swappable-provider reference) | server | provides `storage` |
+| [built] `ui-kit` | Owned Button/Badge/Card/Container/Input primitives (cva + cn), stock Tailwind zinc/blue palette with dark: support | web | n/a |
 
 ---
 
@@ -45,8 +46,8 @@ Legend: `[built]` available now · `[planned]` on the roadmap (spec below, not b
 | [planned] `cache-redis` | Redis cache backend + compose service | server, root | provides `cache` |
 | [planned] `search` | Full-text search (Postgres FTS or Meilisearch) | server | provides `search` |
 | [planned] `file-uploads` | Upload endpoint + presigned URLs | server, web, mobile | requires `storage` |
-| [planned] `audit-log` | Soft-delete + change history mixin | server | — |
-| [planned] `pagination` | Standardized cursor pagination + client helpers | server, shared | — |
+| [planned] `audit-log` | Soft-delete + change history mixin | server | n/a |
+| [planned] `pagination` | Standardized cursor pagination + client helpers | server, shared | n/a |
 
 ### Comms & notifications
 | id | What it gives you | Targets | Notes |
@@ -60,7 +61,7 @@ Legend: `[built]` available now · `[planned]` on the roadmap (spec below, not b
 ### Payments & billing
 | id | What it gives you | Targets | Notes |
 | --- | --- | --- | --- |
-| [planned] `payments-stripe` | `PaymentProvider` (Stripe) — checkout, webhooks | server, web | provides `payments` |
+| [planned] `payments-stripe` | `PaymentProvider` (Stripe): checkout, webhooks | server, web | provides `payments` |
 | [planned] `subscriptions` | Plans, subscription state, billing portal | server, web | requires `payments-stripe`, `auth` |
 | [planned] `metering` | Usage-based billing counters | server | requires `payments-stripe` |
 
@@ -70,56 +71,57 @@ Legend: `[built]` available now · `[planned]` on the roadmap (spec below, not b
 | [planned] `jobs` | Background workers (Celery/RQ/Django-Q) + compose worker | server, root | provides `jobs`; requires `cache-redis` |
 | [planned] `scheduler` | Cron/periodic tasks | server | requires `jobs` |
 | [planned] `realtime` | WebSockets/SSE (Django Channels) + client hook | server, web, mobile, shared | provides `realtime` |
+| [planned] `workflow-engine` | Dependency-free finite-state-machine engine: named transitions on any model, with an immutable transition log | server | n/a |
 
 ### Frontend / client experience
 | id | What it gives you | Targets | Notes |
 | --- | --- | --- | --- |
 | [planned] `query` | TanStack Query provider + typed hooks over `api-client` | web, mobile | provides `data-layer` |
-| [planned] `nativewind` | Tailwind classes on mobile | mobile | — |
-| [planned] `ui-kit` | Shared component library (buttons/inputs/cards), theming + dark mode | web, mobile, shared | — |
-| [planned] `forms` | react-hook-form + zod validation, shared schemas | web, mobile, shared | — |
-| [planned] `i18n` | Localization scaffolding + shared message catalog | web, mobile, shared | — |
-| [planned] `state` | App state store (Zustand) preset | web, mobile | — |
+| [planned] `nativewind` | Tailwind classes on mobile | mobile | n/a |
+| [planned] `ui-kit-mobile` | Mobile-side primitives to match the web `ui-kit`, plus shared design tokens | mobile, shared | n/a |
+| [planned] `forms` | react-hook-form + zod validation, shared schemas | web, mobile, shared | n/a |
+| [planned] `i18n` | Localization scaffolding + shared message catalog | web, mobile, shared | n/a |
+| [planned] `state` | App state store (Zustand) preset | web, mobile | n/a |
 
 ### Ops & observability
 | id | What it gives you | Targets | Notes |
 | --- | --- | --- | --- |
 | [planned] `sentry` | Error tracking wired into server + web + mobile | server, web, mobile | provides `error-tracking` |
-| [planned] `logging` | Structured JSON logging + request ids | server | — |
-| [planned] `rate-limit` | DRF throttling presets | server | — |
-| [planned] `healthz` | Readiness/liveness probes (DB, cache) | server | — |
-| [planned] `metrics` | Prometheus metrics endpoint | server | — |
-| [planned] `feature-flags` | Flag service + client hook | server, web, mobile, shared | — |
+| [planned] `logging` | Structured JSON logging + request ids | server | n/a |
+| [planned] `rate-limit` | DRF throttling presets | server | n/a |
+| [planned] `healthz` | Readiness/liveness probes (DB, cache) | server | n/a |
+| [planned] `metrics` | Prometheus metrics endpoint | server | n/a |
+| [planned] `feature-flags` | Flag service + client hook | server, web, mobile, shared | n/a |
 | [planned] `analytics` | `AnalyticsProvider` (PostHog/GA) on clients | web, mobile, shared | provides `analytics` |
-| [planned] `api-versioning` | URL/header API versioning scaffold | server | — |
+| [planned] `api-versioning` | URL/header API versioning scaffold | server | n/a |
 
 ### Deployment presets
 | id | What it gives you | Targets | Notes |
 | --- | --- | --- | --- |
 | [planned] `deploy-railway` / `deploy-render` / `deploy-fly` | Server deploy config | server, root | pick one |
-| [planned] `deploy-vercel` | Web deploy config | web, root | — |
-| [planned] `eas` | Mobile build/submit profiles (`eas.json`) | mobile | — |
+| [planned] `deploy-vercel` | Web deploy config | web, root | n/a |
+| [planned] `eas` | Mobile build/submit profiles (`eas.json`) | mobile | n/a |
 
 ---
 
 ## Recommended build order
 
-Highest leverage first — the things nearly every product needs:
+Roughly in order of leverage, the things nearly every product needs:
 
-1. **`email`** — unblocks verification, password reset, receipts (many features depend on it).
-2. **`query`** — the data-fetching layer both clients want; makes `api-client` ergonomic.
-3. **`jobs`** + **`cache-redis`** — async work + caching; unblocks webhooks, scheduler, metering.
-4. **`payments-stripe`** + **`subscriptions`** — if you're building SaaS.
-5. **`push`** / **`notifications`** — engagement for mobile-first products.
-6. **`sentry`** + **`logging`** + **`rate-limit`** — production hardening.
-7. **`ui-kit`** + **`forms`** — stop rebuilding buttons and validation every project.
+1. **`email`**: unblocks verification, password reset, receipts (many features depend on it).
+2. **`query`**: the data-fetching layer both clients want; makes `api-client` ergonomic.
+3. **`jobs`** + **`cache-redis`**: async work + caching; unblocks webhooks, scheduler, metering.
+4. **`payments-stripe`** + **`subscriptions`**: if you're building SaaS.
+5. **`push`** / **`notifications`**: engagement for mobile-first products.
+6. **`sentry`** + **`logging`** + **`rate-limit`**: production hardening.
+7. **`forms`** (pairs with the already-built `ui-kit`): stop rebuilding validation every project.
 
 Everything above is additive: build the ones you need, in any order, and they show up in the
 picker for every future project.
 
 ## How to get one built
 
-- **Build it yourself** — follow [authoring-a-module.md](authoring-a-module.md); most are a
+- **Build it yourself**: follow [authoring-a-module.md](authoring-a-module.md); most are a
   `module.json` + a few files, using the `storage` component as the abstract-provider template.
-- **Ask** — describe the feature and its target apps, and it can be scaffolded into `modules/`
+- **Ask**: describe the feature and its target apps, and it can be scaffolded into `modules/`
   following the same contract.
