@@ -34,7 +34,7 @@ describe("example ProfilePage", () => {
       logout: vi.fn(),
     });
     render(<ProfilePage />);
-    expect(screen.getByText("Signed in ✓")).toBeTruthy();
+    expect(screen.getByText("Signed in")).toBeTruthy();
     expect(screen.getByText(/me@x\.com/)).toBeTruthy();
     expect(screen.getByText(/ID: 7/)).toBeTruthy();
   });

@@ -20,7 +20,23 @@ export default function ProfilePage() {
 
   return (
     <main className="mx-auto max-w-xl p-8">
-      <h1 className="text-2xl font-bold">Signed in ✓</h1>
+      <h1 className="flex items-center gap-2 text-2xl font-bold">
+        Signed in
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-green-600"
+          aria-hidden="true"
+        >
+          <path d="M4 10.5 8 14.5 16 6" />
+        </svg>
+      </h1>
       <p className="mt-2">ID: {user.id}</p>
       <p>Email: {user.email}</p>
       <button

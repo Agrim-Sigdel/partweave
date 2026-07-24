@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildContext } from "./compose.js";
 import { jsPmInstallPlan, pyPmInstallPlan } from "./pm.js";
 import {
+  buildAgentsGuide,
   buildCiWorkflows,
   buildEnvFiles,
   buildMakefile,
@@ -59,6 +60,18 @@ describe("buildTaskRunner (cross-platform)", () => {
   it("only includes db:up when Docker is present", () => {
     expect(buildTaskRunner(ctx({ apps: ["server"] }), true)).toContain('"db:up"()');
     expect(buildTaskRunner(ctx({ apps: ["server"] }), false)).not.toContain('"db:up"()');
+  });
+
+  it("scopes docker compose to the project slug so containers/volumes don't collide across projects (F-infra-project-name)", () => {
+    const a = buildTaskRunner(ctx({ apps: ["server"], projectName: "alpha" }), true);
+    const b = buildTaskRunner(ctx({ apps: ["server"], projectName: "beta" }), true);
+    expect(a).toContain('"-p", "alpha"');
+    expect(a).toContain('"-p", "alpha", "-f", "infra/docker-compose.yml", "down"');
+    expect(b).toContain('"-p", "beta"');
+    // Different projects must not share a compose project name (that's what
+    // caused two locally-scaffolded apps to fight over the same `infra-db-1`
+    // container and `infra_pgdata` volume before this fix).
+    expect(a).not.toContain('"-p", "beta"');
   });
 
   it("runs multiple dev servers in parallel, a single one directly", () => {
@@ -181,6 +194,58 @@ describe("buildCiWorkflows is green on first push (S0.2/F2)", () => {
     const server = wf[".github/workflows/server.yml"];
     expect(server).toContain("migrate");
     expect(server).not.toContain("services:"); // no DB container to spin up
+  });
+});
+
+describe("buildAgentsGuide", () => {
+  it("only documents apps that are actually present", () => {
+    const serverOnly = buildAgentsGuide(ctx({ apps: ["server"] }), []);
+    expect(serverOnly).toContain("apps/server/");
+    expect(serverOnly).not.toContain("apps/web/");
+    expect(serverOnly).not.toContain("apps/mobile/");
+  });
+
+  it("gives each present app's correct test command in the project's chosen JS/PY manager", () => {
+    const pnpmGuide = buildAgentsGuide(
+      ctx({ apps: ["server", "web", "mobile"], jsPm: "pnpm", pyPm: "uv" }),
+      [],
+    );
+    expect(pnpmGuide).toContain("uv run pytest -q");
+    expect(pnpmGuide).toContain("pnpm --filter web test");
+    expect(pnpmGuide).toContain("pnpm --filter mobile test");
+
+    const npmGuide = buildAgentsGuide(
+      ctx({ apps: ["server", "web"], jsPm: "npm", pyPm: "pip" }),
+      [],
+    );
+    expect(npmGuide).toContain(".venv/bin/pytest -q");
+    expect(npmGuide).toContain("npm run test -w web");
+  });
+
+  it("flags that web/mobile CI doesn't run tests yet, so it isn't mistaken for coverage", () => {
+    const guide = buildAgentsGuide(ctx({ apps: ["server", "web"] }), []);
+    expect(guide).toMatch(/don't run their test suites yet/);
+  });
+
+  it("only recommends the api-client regen step when server + a client both exist", () => {
+    const withClient = buildAgentsGuide(ctx({ apps: ["server", "web"] }), []);
+    expect(withClient).toContain("npm run gen:api");
+
+    const serverOnly = buildAgentsGuide(ctx({ apps: ["server"] }), []);
+    expect(serverOnly).not.toContain("gen:api");
+  });
+
+  it("lists installed modules by id and description", () => {
+    const auditLog = {
+      manifest: { id: "audit-log", title: "Audit Logging", description: "Immutable security logging" },
+    } as unknown as Module;
+    const guide = buildAgentsGuide(ctx({ apps: ["server"] }), [auditLog]);
+    expect(guide).toContain("## Installed modules");
+    expect(guide).toContain("**audit-log** — Immutable security logging");
+  });
+
+  it("omits the installed-modules section entirely when nothing was selected", () => {
+    expect(buildAgentsGuide(ctx({ apps: ["server"] }), [])).not.toContain("## Installed modules");
   });
 });
 

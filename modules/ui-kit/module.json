@@ -1,0 +1,25 @@
+{
+  "id": "ui-kit",
+  "title": "UI Component Kit",
+  "description": "Owned Button/Badge/Card/Container/Input primitives (cva + cn), stock Tailwind zinc/blue palette with dark: support. No tailwind.config.ts or globals.css changes required.",
+  "kind": "feature",
+  "targets": [
+    "web"
+  ],
+  "requiresApps": [
+    "web"
+  ],
+  "requires": [],
+  "wiring": {
+    "web": {
+      "deps": [
+        "class-variance-authority@^0.7.1",
+        "clsx@^2.1.1",
+        "tailwind-merge@^2.6.0"
+      ]
+    }
+  },
+  "notes": [
+    "Brand-neutral defaults on purpose: swap the zinc/blue Tailwind classes in components/ui/*.tsx for your own palette."
+  ]
+}

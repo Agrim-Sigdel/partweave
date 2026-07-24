@@ -37,7 +37,7 @@ describe("example Profile screen", () => {
       logout: jest.fn(),
     });
     render(<Profile />);
-    expect(screen.getByText("Signed in ✓")).toBeTruthy();
+    expect(screen.getByText("Signed in")).toBeTruthy();
     expect(screen.getByText("Email: me@x.com")).toBeTruthy();
     expect(screen.getByText("ID: 7")).toBeTruthy();
   });

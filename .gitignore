@@ -29,6 +29,10 @@ venv/
 /.out/
 /tmp-e2e/
 
+# apps/website is its own separate git repo (partweave.dev, generated with
+# partweave), pushed independently — never tracked from the base repo.
+/apps/website/
+
 # publish artifacts copied into the CLI package by prepack (see
 # packages/cli/scripts/bundle-modules.mjs) — generated, never committed
 /packages/cli/modules/
@@ -44,3 +48,8 @@ graphify-out/
 
 # curated architecture docs — kept locally, not committed
 /project-insight/
+
+# local agent state — permission settings and worktree checkouts are
+# per-machine, never committed. .claude/skills/ IS committed (project tooling).
+/.claude/settings.local.json
+/.claude/worktrees/

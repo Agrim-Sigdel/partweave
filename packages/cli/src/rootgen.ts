@@ -272,9 +272,9 @@ export function buildTaskRunner(ctx: RenderContext, hasDocker: boolean): string 
         `      console.error("Docker isn't running \\u2014 start Docker Desktop and retry."); process.exit(1);`,
         `    }`,
         `    const env = existsSync(".env") ? ["--env-file", ".env"] : [];`,
-        `    run("docker", ["compose", ...env, "-f", "infra/docker-compose.yml", "up", "-d", "db"]);`,
+        `    run("docker", ["compose", ...env, "-p", "${ctx.projectSlug}", "-f", "infra/docker-compose.yml", "up", "-d", "db"]);`,
         `  },`,
-        `  "db:down"() { run("docker", ["compose", "-f", "infra/docker-compose.yml", "down"]); },`,
+        `  "db:down"() { run("docker", ["compose", "-p", "${ctx.projectSlug}", "-f", "infra/docker-compose.yml", "down"]); },`,
       );
     }
   }
@@ -649,6 +649,142 @@ export function buildReadme(
   if (ctx.hasMobile) envFiles.push("- `apps/mobile/.env` — `EXPO_PUBLIC_*` (app-exposed)");
   if (hasDocker) envFiles.push("- `.env` (root) — `POSTGRES_*` for the database container");
   parts.push(...envFiles, "");
+  return parts.join("\n");
+}
+
+/**
+ * A guide for whoever picks up the generated project next — human or coding
+ * agent — covering the file map, how to run each app's test suite, and a
+ * step-by-step recipe for adding a feature (either hand-written or via another
+ * partweave module). Written once at `create` time (see the `rootFiles === "all"`
+ * guard at the call site), same lifecycle as README.md — F4 preserves hand
+ * edits, so it isn't regenerated on a later `add`.
+ */
+export function buildAgentsGuide(ctx: RenderContext, modules: Module[]): string {
+  const js = jsPmProfile(ctx.jsPm);
+  const py = pyPmProfile(ctx.pyPm);
+  const parts: string[] = [];
+
+  parts.push(
+    `# Working in ${ctx.projectName}`,
+    "",
+    "This file orients whoever picks up this project next — a human developer or a coding " +
+      "agent — on where things live, how to run the tests, and how to add a feature without " +
+      "guessing at the architecture. See `README.md` for setup and what's installed.",
+    "",
+  );
+
+  parts.push("## File map", "");
+  if (ctx.hasServer) {
+    parts.push(
+      "**`apps/server/`** — Django + DRF API",
+      "- `config/settings.py` — env-driven settings; module wiring lands here via `# <partweave:...>` anchors",
+      "- `config/urls.py` — root URL conf; each Django app's URLs get `include()`d here",
+      "- `manage.py` — Django management commands (`migrate`, `createsuperuser`, …)",
+      "- `tests/` — pytest tests (`test_*.py`); see `tests/test_health.py` for the pattern",
+      "- Each feature lives in its own Django app under `apps/server/<app_name>/`: " +
+        "`models.py`, `serializers.py`, `views.py`, `urls.py`, `admin.py`, `apps.py`",
+      "",
+    );
+  }
+  if (ctx.hasWeb) {
+    parts.push(
+      "**`apps/web/`** — Next.js (App Router)",
+      "- `app/page.tsx` — homepage; `app/layout.tsx` — root layout; `app/providers.tsx` — client-side providers",
+      "- `src/nav.ts` — nav config",
+      "- new routes are folders under `app/` (`app/<route>/page.tsx`), per the App Router convention",
+      "- `vitest.config.mts` — test runner config; co-locate `*.test.ts(x)` next to the code under test",
+      "",
+    );
+  }
+  if (ctx.hasMobile) {
+    parts.push(
+      "**`apps/mobile/`** — Expo (React Native, Expo Router)",
+      "- `app/index.tsx` — home screen; `app/_layout.tsx` — root layout; `src/providers.tsx` — providers",
+      "- `src/nav.ts` — nav config",
+      "- new screens are files/folders under `app/`, per the Expo Router convention",
+      "- `jest.config.js` — test runner config; co-locate `*.test.ts(x)` next to the code under test",
+      "",
+    );
+  }
+  if (ctx.hasShared) {
+    parts.push(
+      "**`packages/shared/`** — TypeScript types/interfaces shared by web and mobile. Add a type " +
+        "here instead of duplicating it in both clients.",
+      "",
+    );
+  }
+  if (ctx.hasApiClient) {
+    parts.push(
+      "**`packages/api-client/`** — typed client generated from the server's OpenAPI schema. " +
+        "**Don't hand-edit it** — change the DRF view/serializer, then run `npm run gen:api`.",
+      "",
+    );
+  }
+
+  parts.push("## Running the tests", "");
+  if (ctx.hasServer) {
+    parts.push(`- Server: \`cd apps/server && ${py.run("pytest -q")}\``);
+  }
+  if (ctx.hasWeb) {
+    parts.push(`- Web: \`${js.run("web", "test")}\` (vitest)`);
+  }
+  if (ctx.hasMobile) {
+    parts.push(`- Mobile: \`${js.run("mobile", "test")}\` (jest)`);
+  }
+  parts.push(
+    "",
+    "Only the server's tests run in CI today (`.github/workflows/server.yml`) — web and mobile " +
+      "CI (if present) typecheck and build but don't run their test suites yet. Run them locally " +
+      "before you push.",
+    "",
+  );
+
+  parts.push("## Adding a feature", "");
+  parts.push(
+    "1. **Check the partweave catalog first** — `partweave list` (or `npx partweave explore`) " +
+      "shows every available module with its options and changelog. If what you need already " +
+      "exists there, `partweave add <id>` wires it in instead of hand-rolling it.",
+    "2. **If it's product-specific, build it directly:**",
+  );
+  if (ctx.hasServer) {
+    parts.push(
+      "   - Server: `python manage.py startapp <name>` under `apps/server/`, add it to " +
+        "`INSTALLED_APPS`, define `models.py` + `serializers.py` + `views.py`, wire `urls.py` " +
+        "into `config/urls.py`, then `python manage.py makemigrations && migrate`. Add a test in " +
+        "`tests/` before you consider it done.",
+    );
+  }
+  if (ctx.hasWeb) {
+    parts.push(
+      "   - Web: add a route folder under `app/`, add a `*.test.tsx` alongside it, and prefer " +
+        "types from `packages/shared` over redefining them locally.",
+    );
+  }
+  if (ctx.hasMobile) {
+    parts.push(
+      "   - Mobile: add a screen under `app/`, add a `*.test.tsx` alongside it, same shared-types rule as web.",
+    );
+  }
+  if (ctx.hasServer && (ctx.hasWeb || ctx.hasMobile)) {
+    parts.push(
+      "3. **Touched the server's API shape?** Run `npm run gen:api` to regenerate " +
+        "`packages/api-client` so both clients see the new types.",
+    );
+  }
+  parts.push(
+    "",
+    "**Reusable across future projects?** Consider extracting it into a partweave module instead " +
+      "of leaving it one-off — see `partweave extract` in the partweave docs.",
+    "",
+  );
+
+  if (modules.length) {
+    parts.push("## Installed modules", "");
+    for (const m of modules) parts.push(`- **${m.manifest.id}** — ${m.manifest.description ?? ""}`);
+    parts.push("");
+  }
+
   return parts.join("\n");
 }
 

@@ -8,7 +8,8 @@
   "author": "Agrim Sigdel <sigdelagrim35@gmail.com>",
   "packageManager": "pnpm@10.20.0",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "engines": {
     "node": ">=20"
@@ -20,7 +21,8 @@
     "create": "pnpm --filter partweave exec create-partweave",
     "test": "pnpm --filter partweave test",
     "typecheck": "pnpm -r typecheck",
-    "release": "pnpm --filter partweave exec npm version"
+    "release": "pnpm --filter partweave exec npm version",
+    "website": "pnpm --filter website dev"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

@@ -24,7 +24,7 @@ export default function Profile() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Signed in ✓</Text>
+      <Text style={styles.title}>Signed in</Text>
       <Text>ID: {user.id}</Text>
       <Text>Email: {user.email}</Text>
       <Button title="Log out" onPress={() => logout()} />

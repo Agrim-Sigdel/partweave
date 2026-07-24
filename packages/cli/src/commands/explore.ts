@@ -26,7 +26,7 @@ export async function runExplore(flags: ExploreFlags): Promise<void> {
     }
 
     // For humans: interactive CLI
-    console.log(pc.bold("\n🧭 Partweave Feature Explorer\n"));
+    console.log(pc.bold("\nPartweave Feature Explorer\n"));
 
     const choices = catalog.modules.map((m) => {
       let description = m.description || "";

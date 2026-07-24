@@ -12,6 +12,7 @@ import { DEFAULT_JS_PM, DEFAULT_PY_PM, jsPmProfile } from "./pm.js";
 import type { Registry } from "./registry.js";
 import { isBinaryPath, slugify } from "./render.js";
 import {
+  buildAgentsGuide,
   buildEnvFiles,
   buildCiWorkflows,
   buildMakefile,
@@ -587,6 +588,7 @@ export function compose(opts: ComposeOptions): ComposeResult {
     rootFiles !== "none" ? writeStructuralRootFiles(outDir, ctx, modules, baseline) : [];
   if (rootFiles === "all") {
     writeFileEnsured(join(outDir, "README.md"), buildReadme(ctx, modules));
+    writeFileEnsured(join(outDir, "AGENTS.md"), buildAgentsGuide(ctx, modules));
   }
 
   // 3. module files for the targets being wired

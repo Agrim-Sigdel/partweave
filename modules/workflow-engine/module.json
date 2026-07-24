@@ -1,0 +1,22 @@
+{
+  "id": "workflow-engine",
+  "title": "Workflow / State Machine Engine",
+  "description": "Dependency-free finite-state-machine engine for driving any model through a declared lifecycle, with an immutable transition log.",
+  "kind": "feature",
+  "targets": ["server"],
+  "requiresApps": ["server"],
+  "requires": [],
+  "files": [
+    "server/core/workflow_engine/apps.py",
+    "server/core/workflow_engine/machine.py",
+    "server/core/workflow_engine/models.py",
+    "server/core/workflow_engine/admin.py"
+  ],
+  "wiring": {
+    "server": {
+      "anchors": {
+        "settings_installed_apps": ["    \"core.workflow_engine\","]
+      }
+    }
+  }
+}
