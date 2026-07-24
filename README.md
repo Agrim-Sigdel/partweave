@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/partweave.svg)](https://www.npmjs.com/package/partweave)
 [![CI](https://github.com/Agrim-Sigdel/partweave/actions/workflows/ci.yml/badge.svg)](https://github.com/Agrim-Sigdel/partweave/actions/workflows/ci.yml)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/node/v/partweave.svg)](https://www.npmjs.com/package/partweave)
 
 Generate new projects that contain **only the parts you pick** — a Django server, a
@@ -160,7 +160,7 @@ git tag -a vX.Y.Z -m "partweave X.Y.Z"   # npm version --workspace does NOT tag 
 git push origin main --follow-tags        # pushes commit + tag → the publish workflow fires
 ```
 
-> The `prepack` script copies `modules/`, README, LICENSE + NOTICE into the package, so
+> The `prepack` script copies `modules/`, README, LICENSE into the package, so
 > `npm publish` ships a self-contained CLI. Auth is via npm Trusted Publishing (OIDC) —
 > no `NPM_TOKEN` secret is needed (see [`publish.yml`](.github/workflows/publish.yml)).
 
@@ -172,11 +172,7 @@ If you build something with partweave, a mention or a link back is always apprec
 
 ## License
 
-Licensed under the [Apache License 2.0](LICENSE) — permissive and free for commercial use.
+Licensed under the [MIT License](LICENSE) — permissive and free for commercial use.
 
-- **Projects you generate are yours.** partweave copies template code into your project; you
-  own that output and carry no obligation back to this repo.
-- **Attribution (Apache §4d):** redistributing partweave itself — or a fork of it — must keep
-  the [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE) files intact.
-- **Trademark (Apache §6):** the **partweave** name and branding are reserved. You may fork
-  and even sell the code, but not market a derivative under the "partweave" name.
+**Projects you generate are yours.** partweave copies template code into your project; you
+own that output and carry no obligation back to this repo.

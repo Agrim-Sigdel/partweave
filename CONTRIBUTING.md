@@ -27,7 +27,7 @@ packages/cli/          The generator (published to npm as `partweave`)
     compose.ts         Orchestrates a full generation run
     rootgen.ts         Builds the monorepo shell (package.json, workspace, runner, CI, …)
     pm.ts              Package-manager abstraction (pnpm/npm, uv/pip)
-  scripts/             prepack bundling (copies modules/ + README/LICENSE/NOTICE)
+  scripts/             prepack bundling (copies modules/ + README/LICENSE)
 modules/               The template catalog — this is the product's content
   _core/               Base apps (server, web, mobile, shared, api-client)
   <component>/         Optional components, each with a module.json manifest
@@ -118,7 +118,7 @@ open an issue first so we can discuss whether the contract needs to grow.
 - One logical change per PR. Include the command you ran and the observed result.
 - Green `typecheck` + `test` + a clean generated project are required to merge.
 - By contributing you agree your contributions are licensed under the project's
-  [Apache License 2.0](LICENSE) (see §5 of the license).
+  [MIT License](LICENSE).
 
 ## Releasing (maintainers)
 

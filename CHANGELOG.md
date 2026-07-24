@@ -8,6 +8,10 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+### Changed
+- **License: Apache-2.0 → MIT.** Dropped the `NOTICE` file, patent grant, and trademark
+  reservation clause in favor of a plain, permissive MIT license.
+
 ### Fixed
 - **`docker` module: compose project name collision across projects.** `db:up`/`db:down` never passed `docker compose -p <name>`, so Compose fell back to naming every project after the containing folder — which is always `infra/` in a generated app. Every locally-scaffolded partweave project with the `docker` module therefore shared the same container (`infra-db-1`) and volume (`infra_pgdata`), silently reusing (or losing) each other's database data and fighting over port 5432. Fixed by scoping `docker compose` to `-p <projectSlug>`, so containers/volumes are namespaced per project (e.g. `my-app-db-1`, `my-app_pgdata`). Caught while smoke-testing a freshly generated project: `migrate` reported "No migrations to apply" on a database that had never been migrated in this project before.
 

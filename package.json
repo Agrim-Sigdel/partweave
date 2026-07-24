@@ -4,7 +4,7 @@
   "private": true,
   "description": "A modular full-stack scaffolding platform — pick the parts you need (Django server, Next.js web, Expo mobile) and generate only that code, wired together.",
   "type": "module",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "author": "Agrim Sigdel <sigdelagrim35@gmail.com>",
   "packageManager": "pnpm@10.20.0",
   "workspaces": [

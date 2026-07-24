@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 
 const pkgDir = dirname(dirname(fileURLToPath(import.meta.url))); // packages/cli
 const root = join(pkgDir, "..", ".."); // repo root
-const copied = ["README.md", "LICENSE", "NOTICE", "modules"];
+const copied = ["README.md", "LICENSE", "modules"];
 
 // `--clean` (run from postpack) removes the copied artifacts again. Otherwise a
 // leftover packages/cli/modules/ would shadow the repo-root catalog on the next
@@ -41,9 +41,8 @@ await cp(modulesSrc, join(pkgDir, "modules"), {
 });
 console.log("▸ Copied modules/ catalog");
 
-// README + LICENSE + NOTICE so the npm package page, license metadata, and the
-// Apache attribution notice ship with the package.
-for (const file of ["README.md", "LICENSE", "NOTICE"]) {
+// README + LICENSE so the npm package page and license metadata ship with the package.
+for (const file of ["README.md", "LICENSE"]) {
   const src = join(root, file);
   if (existsSync(src)) {
     await cp(src, join(pkgDir, file));
