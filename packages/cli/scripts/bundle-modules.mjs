@@ -1,8 +1,8 @@
 // Copy repo-root assets the published package needs into this package so
 // `npm publish` actually ships them. npm ignores `files` entries outside the
-// package root (like `../../modules`) and looks for README/LICENSE in the
-// package dir only — without this the CLI would install with no templates
-// (and no license/readme) and fail at runtime. Runs via the `prepack` script.
+// package root (like `../../modules`) and looks for README in the package
+// dir only — without this the CLI would install with no templates (and no
+// readme) and fail at runtime. Runs via the `prepack` script.
 import { cp, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 
 const pkgDir = dirname(dirname(fileURLToPath(import.meta.url))); // packages/cli
 const root = join(pkgDir, "..", ".."); // repo root
-const copied = ["README.md", "LICENSE", "modules"];
+const copied = ["README.md", "modules"];
 
 // `--clean` (run from postpack) removes the copied artifacts again. Otherwise a
 // leftover packages/cli/modules/ would shadow the repo-root catalog on the next
@@ -41,8 +41,8 @@ await cp(modulesSrc, join(pkgDir, "modules"), {
 });
 console.log("▸ Copied modules/ catalog");
 
-// README + LICENSE so the npm package page and license metadata ship with the package.
-for (const file of ["README.md", "LICENSE"]) {
+// README so the npm package page ships with the package.
+for (const file of ["README.md"]) {
   const src = join(root, file);
   if (existsSync(src)) {
     await cp(src, join(pkgDir, file));

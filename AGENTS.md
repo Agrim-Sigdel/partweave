@@ -21,7 +21,7 @@ project still installs, typechecks, and tests clean.
 - **Never hard-code a package manager** in templates. Use the abstraction in
   [`packages/cli/src/pm.ts`](packages/cli/src/pm.ts) (pnpm/npm, uv/pip).
 - **Comments explain _why_, not _what_.** Match the existing density; don't add restatement.
-- Keep the published tarball lean — only `dist/`, `modules/`, and `README`/`LICENSE`
+- Keep the published tarball lean — only `dist/`, `modules/`, and `README`
   ship (see the `files` array in `packages/cli/package.json`).
 - Don't commit `dist/` — it's built at `prepack`. Don't edit files under `modules/` expecting
   them to run locally; they are *template source* copied into generated projects.
@@ -129,7 +129,7 @@ Do **not** run `npm publish` locally — publishing goes through CI/OIDC only. N
 
 - `packages/cli/dist/` is stale until you `build` — always rebuild before scaffolding to test
   a source change.
-- `bundle-modules.mjs` copies `modules/` + `README`/`LICENSE` into `packages/cli/` at
+- `bundle-modules.mjs` copies `modules/` + `README` into `packages/cli/` at
   `prepack` and removes them at `postpack`. If a `packages/cli/modules/` dir is lying around,
   it shadows the repo-root catalog on local runs — clean it with
   `node packages/cli/scripts/bundle-modules.mjs --clean`.

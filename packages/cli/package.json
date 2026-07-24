@@ -3,7 +3,6 @@
   "version": "0.6.0",
   "description": "A modular full-stack scaffolder — pick the parts you need (Django server, Next.js web, Expo mobile) and generate only that code, wired together.",
   "type": "module",
-  "license": "MIT",
   "publishConfig": {
     "access": "public"
   },
@@ -40,8 +39,7 @@
   "files": [
     "dist/**/*.js",
     "modules/**",
-    "README.md",
-    "LICENSE"
+    "README.md"
   ],
   "scripts": {
     "build": "tsup",

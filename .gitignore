@@ -36,7 +36,6 @@ venv/
 # publish artifacts copied into the CLI package by prepack (see
 # packages/cli/scripts/bundle-modules.mjs) — generated, never committed
 /packages/cli/modules/
-/packages/cli/LICENSE
 /packages/cli/README.md
 *.tgz
 

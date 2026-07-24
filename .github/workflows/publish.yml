@@ -65,7 +65,7 @@ jobs:
 
       # Auth comes from OIDC (the id-token above) via the configured trusted
       # publisher — no token. `npm publish` runs prepack, which builds the CLI
-      # and bundles modules/ + README + LICENSE; provenance is added automatically.
+      # and bundles modules/ + README; provenance is added automatically.
       - name: Publish
         run: npm publish --access public
         working-directory: packages/cli

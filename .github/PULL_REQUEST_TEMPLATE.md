@@ -30,4 +30,4 @@ cd /tmp/app && pnpm install && pnpm -r typecheck && pnpm -r test
 - [ ] `pnpm --filter partweave test` passes
 - [ ] A generated project including my change installs and typechecks/tests cleanly
 - [ ] I updated docs / `CHANGELOG.md` where relevant
-- [ ] I read [CONTRIBUTING.md](../CONTRIBUTING.md) and agree to license my work under MIT
+- [ ] I read [CONTRIBUTING.md](../CONTRIBUTING.md)

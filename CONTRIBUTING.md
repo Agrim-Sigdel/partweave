@@ -27,7 +27,7 @@ packages/cli/          The generator (published to npm as `partweave`)
     compose.ts         Orchestrates a full generation run
     rootgen.ts         Builds the monorepo shell (package.json, workspace, runner, CI, …)
     pm.ts              Package-manager abstraction (pnpm/npm, uv/pip)
-  scripts/             prepack bundling (copies modules/ + README/LICENSE)
+  scripts/             prepack bundling (copies modules/ + README)
 modules/               The template catalog — this is the product's content
   _core/               Base apps (server, web, mobile, shared, api-client)
   <component>/         Optional components, each with a module.json manifest
@@ -109,7 +109,7 @@ open an issue first so we can discuss whether the contract needs to grow.
   emitted scripts — use `scripts/run.mjs`'s structured-argv `run()` helper.
 - **Templates stay package-manager-agnostic**: honor the pnpm/npm and uv/pip abstractions in
   [`pm.ts`](packages/cli/src/pm.ts) rather than hard-coding a tool.
-- Keep the published tarball lean — only `dist/`, `modules/`, and the license/readme ship.
+- Keep the published tarball lean — only `dist/`, `modules/`, and the readme ship.
 
 ## Commit & PR guidelines
 
@@ -117,8 +117,6 @@ open an issue first so we can discuss whether the contract needs to grow.
   storage component`, `docs: …`, `ci: …`, `chore: …`.
 - One logical change per PR. Include the command you ran and the observed result.
 - Green `typecheck` + `test` + a clean generated project are required to merge.
-- By contributing you agree your contributions are licensed under the project's
-  [MIT License](LICENSE).
 
 ## Releasing (maintainers)
 
