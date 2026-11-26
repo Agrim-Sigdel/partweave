@@ -1,0 +1,27 @@
+{
+  "id": "auth-2fa",
+  "title": "Two-Factor Auth (Verified TOTP & Backup Codes)",
+  "description": "Verified TOTP step-window matching and single-use backup-code consumption.",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./auth-2fa\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "2FA: use TwoFactorVerifier in auth_2fa.wrapper for RFC-6238 TOTP and single-use backup codes."
+  ]
+}

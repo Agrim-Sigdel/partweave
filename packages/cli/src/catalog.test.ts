@@ -23,11 +23,28 @@ function scaffold(apps: AppName[], modules: string[], jsPm: "pnpm" | "npm" = "pn
 }
 
 describe("selectable catalog", () => {
-  it("keeps unfinished designs out of discovery and dependency resolution", () => {
+  it("discovers and resolves the promoted and verified-core modules", () => {
     const ids = serializeCatalog(registry).modules.map((m) => m.id);
-    for (const id of ["rbac", "rate-limit", "audit-log", "workflow-engine"]) {
-      expect(ids).not.toContain(id);
-      expect(() => resolveModules(registry, [id])).toThrow(/Unknown module/);
+    for (const id of [
+      "rbac",
+      "rate-limit",
+      "audit-log",
+      "workflow-engine",
+      "multi-tenancy",
+      "api-keys",
+      "pagination",
+      "subscriptions",
+      "metering",
+      "auth-2fa",
+      "ledger",
+      "pricing",
+      "reservations",
+      "quorum",
+      "filter-eval",
+      "resolve-dag",
+    ]) {
+      expect(ids).toContain(id);
+      expect(resolveModules(registry, [id]).modules).toContain(id);
     }
   });
 

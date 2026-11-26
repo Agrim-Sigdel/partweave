@@ -1,0 +1,27 @@
+{
+  "id": "filter-eval",
+  "title": "Safe Filter & Rule Evaluator",
+  "description": "Verified bounded-depth AST filter evaluator over allowlisted fields (zero eval).",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./filter-eval\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Filter eval: SafeFilterRunner evaluates structured filter ASTs without Python eval() or SQL injection."
+  ]
+}

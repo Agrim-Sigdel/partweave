@@ -1,0 +1,27 @@
+{
+  "id": "ledger",
+  "title": "Double-Entry Ledger",
+  "description": "Verified zero-sum journal entry validation and account balance conservation.",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./ledger\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Ledger: LedgerPoster guarantees every committed journal entry sums to zero."
+  ]
+}

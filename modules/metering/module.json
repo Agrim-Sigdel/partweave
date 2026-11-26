@@ -1,0 +1,27 @@
+{
+  "id": "metering",
+  "title": "Usage Metering (Verified Conservation)",
+  "description": "Verified quota consumption, remaining allowance, and overage conservation math.",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./metering\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Metering: apply_usage enforces exact conservation (new_used - overage + remaining == quota)."
+  ]
+}

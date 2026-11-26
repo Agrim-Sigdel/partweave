@@ -1,0 +1,27 @@
+{
+  "id": "subscriptions",
+  "title": "Subscriptions Lifecycle & Proration",
+  "description": "Verified subscription state machine and integer-safe proration arithmetic.",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./subscriptions\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Subscriptions: use SubscriptionManager in subscriptions.wrapper for lifecycle & proration."
+  ]
+}

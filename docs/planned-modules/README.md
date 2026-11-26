@@ -1,11 +1,10 @@
-# Planned modules
+# Planned modules (archived design notes)
 
-These designs are not implemented and are deliberately outside the selectable
-`modules/` catalog: `rbac`, `rate-limit`, `audit-log`, and `workflow-engine`.
-Their draft manifests are design notes, not installable modules.
+`rbac`, `rate-limit`, `audit-log`, and `workflow-engine` have graduated into the
+selectable catalog under `modules/` with Dafny specs (`spec.dfy`), pure Python &
+TypeScript cores, reusable runtime wrappers, and pytest suites.
 
-To ship one, implement its templates and dependencies under `modules/<id>/`, use
-the anchors in the core scaffolds, add behavioral tests to its generated apps,
-and run the generated-project catalog checks. See
-[authoring a module](../authoring-a-module.md) and the
-[module contract](../module-contract.md).
+The original draft design specs are preserved here as reference notes. See
+[verified-modules.md](../verified-modules.md),
+[authoring-a-module.md](../authoring-a-module.md), and the
+[module contract](../module-contract.md) for the live module implementations.

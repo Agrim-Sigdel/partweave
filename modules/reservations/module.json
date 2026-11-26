@@ -1,0 +1,27 @@
+{
+  "id": "reservations",
+  "title": "Booking & Inventory Reservations",
+  "description": "Verified non-overlapping interval checks and stock conservation invariants.",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./reservations\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Reservations: ReservationCoordinator enforces non-overlapping slots and non-negative inventory."
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "rate-limit",
+  "title": "Rate Limit (Verified Token Bucket)",
+  "description": "Verified token-bucket refill bounds and Retry-After arithmetic.",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./rate-limit\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Rate limit: use consume_tokens or RateLimiter in rate_limit.wrapper with Redis or in-memory state."
+  ]
+}

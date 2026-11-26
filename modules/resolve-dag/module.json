@@ -1,0 +1,27 @@
+{
+  "id": "resolve-dag",
+  "title": "Dependency & Conflict DAG Resolver",
+  "description": "Verified transitive dependency closure, conflict detection, and topological planner.",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./resolve-dag\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Resolve DAG: DependencyPlanner guarantees cycle-free, conflict-free topological order."
+  ]
+}

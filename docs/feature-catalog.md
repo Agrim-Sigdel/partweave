@@ -7,7 +7,8 @@ and it's built on swappable interfaces so you can change the implementation with
 This page is the menu: what's **available now**, and a concrete **roadmap** of components worth
 adding, each written as a mini-spec (what it provides, which apps it touches, what it depends
 on), so it can be built by dropping a folder into `modules/`. See
-[authoring-a-module.md](authoring-a-module.md) to build one.
+[authoring-a-module.md](authoring-a-module.md) to build one, and
+[verified-modules.md](verified-modules.md) for the Dafny-specified core + wrapper modules.
 
 Legend: `[built]` available now · `[planned]` on the roadmap (spec below, not built yet)
 
@@ -15,6 +16,7 @@ Legend: `[built]` available now · `[planned]` on the roadmap (spec below, not b
 
 ## Available now
 
+### Core stack & UI
 | id | What you stop rewriting | Targets | Provides / requires |
 | --- | --- | --- | --- |
 | [built] `db-postgres` | Postgres wiring + driver | server | provides `database` |
@@ -26,9 +28,25 @@ Legend: `[built]` available now · `[planned]` on the roadmap (spec below, not b
 | [built] `ui-kit` | Owned Button/Badge/Card/Container/Input primitives (cva + cn), stock Tailwind zinc/blue palette with dark: support | web | n/a |
 | [built] `feedback` | Public feedback API, database migration, and linked web/mobile submission forms | server, web, mobile | requires server; works without auth |
 
-Only implemented modules live in `modules/` and appear in CLI/API discovery.
-The draft designs for `rbac`, `rate-limit`, `audit-log`, and `workflow-engine`
-live in [planned-modules/](planned-modules/README.md) until implemented and tested.
+### Verified-core logic & domain modules (`spec.dfy` + Python core/wrapper + TS `shared`)
+| id | What you stop rewriting | Targets | Wrapper pattern |
+| --- | --- | --- | --- |
+| [built] `workflow-engine` | Finite-state-machine engine + atomic transition log | server, shared | State-Machine |
+| [built] `rbac` | Role/permission/superuser evaluator + `401`/`403` guard | server, shared | Policy / Guard |
+| [built] `multi-tenancy` | Tenant membership & cross-tenant isolation guard | server, shared | Policy / Guard |
+| [built] `api-keys` | Key prefix, revocation, expiry & scope validator | server, shared | Policy / Guard |
+| [built] `audit-log` | Recursive sensitive-field scrubber & change-diff recorder | server, shared | Pure Transform |
+| [built] `pagination` | Bounded cursor encode/decode & page window slicer | server, shared | Pure Transform |
+| [built] `subscriptions` | Plan lifecycle transitions + integer-cent proration | server, shared | State-Machine |
+| [built] `metering` | Quota conservation & overage tracking | server, shared | Counter / Quota |
+| [built] `rate-limit` | Token-bucket refill bounds & `Retry-After` enforcer | server, shared | Counter / Quota |
+| [built] `auth-2fa` | RFC-6238 TOTP window check + single-use backup codes | server, shared | Pure Transform + State-Machine |
+| [built] `ledger` | Double-entry zero-sum journal poster & balance guard | server, shared | Counter / Quota |
+| [built] `pricing` | Bounded percentage/flat discounts, tax & total breakdown | server, shared | Counter / Quota |
+| [built] `reservations` | Non-overlapping time slots & stock conservation | server, shared | Counter / Quota |
+| [built] `quorum` | Distinct-voter `k-of-n` approval/rejection state machine | server, shared | State-Machine + Policy Guard |
+| [built] `filter-eval` | Allowlisted, bounded-depth AST filter evaluator (no `eval()`) | server, shared | Pure Transform |
+| [built] `resolve-dag` | Transitive dependency closure, conflict & cycle-free planner | server, shared | Pure Transform |
 
 Every selectable module gets its own generated-project CI job, with only its
 declared dependencies. Checks cover installation, typechecks, client tests and
@@ -58,10 +76,6 @@ for inspection; successful projects are removed unless `--keep` is passed.
 | [planned] `auth-oauth` | Social login (Google/Apple/GitHub) | server, web, mobile | provides `auth`; alt/adds to `auth` |
 | [planned] `auth-session` | Cookie/session auth instead of JWT | server, web | provides `auth` (conflicts with `auth`) |
 | [planned] `auth-email-verify` | Email verification + password reset flows | server, web, mobile | requires `auth`, `email` |
-| [planned] `auth-2fa` | TOTP two-factor | server, web | requires `auth` |
-| [planned] `rbac` | Roles & permissions (decorators + client guards) | server, web, mobile, shared | requires `auth` |
-| [planned] `multi-tenancy` | Organizations/teams + per-tenant scoping | server, shared | requires `auth` |
-| [planned] `api-keys` | Machine-to-machine API keys | server | requires `auth` |
 
 ### Data & storage
 | id | What it gives you | Targets | Notes |
@@ -69,8 +83,6 @@ for inspection; successful projects are removed unless `--keep` is passed.
 | [planned] `cache-redis` | Redis cache backend + compose service | server, root | provides `cache` |
 | [planned] `search` | Full-text search (Postgres FTS or Meilisearch) | server | provides `search` |
 | [planned] `file-uploads` | Upload endpoint + presigned URLs | server, web, mobile | requires `storage` |
-| [planned] `audit-log` | Soft-delete + change history mixin | server | n/a |
-| [planned] `pagination` | Standardized cursor pagination + client helpers | server, shared | n/a |
 
 ### Comms & notifications
 | id | What it gives you | Targets | Notes |
@@ -85,8 +97,6 @@ for inspection; successful projects are removed unless `--keep` is passed.
 | id | What it gives you | Targets | Notes |
 | --- | --- | --- | --- |
 | [planned] `payments-stripe` | `PaymentProvider` (Stripe): checkout, webhooks | server, web | provides `payments` |
-| [planned] `subscriptions` | Plans, subscription state, billing portal | server, web | requires `payments-stripe`, `auth` |
-| [planned] `metering` | Usage-based billing counters | server | requires `payments-stripe` |
 
 ### Background & realtime
 | id | What it gives you | Targets | Notes |
@@ -94,7 +104,6 @@ for inspection; successful projects are removed unless `--keep` is passed.
 | [planned] `jobs` | Background workers (Celery/RQ/Django-Q) + compose worker | server, root | provides `jobs`; requires `cache-redis` |
 | [planned] `scheduler` | Cron/periodic tasks | server | requires `jobs` |
 | [planned] `realtime` | WebSockets/SSE (Django Channels) + client hook | server, web, mobile, shared | provides `realtime` |
-| [planned] `workflow-engine` | Dependency-free finite-state-machine engine: named transitions on any model, with an immutable transition log | server | n/a |
 
 ### Frontend / client experience
 | id | What it gives you | Targets | Notes |
@@ -111,7 +120,6 @@ for inspection; successful projects are removed unless `--keep` is passed.
 | --- | --- | --- | --- |
 | [planned] `sentry` | Error tracking wired into server + web + mobile | server, web, mobile | provides `error-tracking` |
 | [planned] `logging` | Structured JSON logging + request ids | server | n/a |
-| [planned] `rate-limit` | DRF throttling presets | server | n/a |
 | [planned] `healthz` | Readiness/liveness probes (DB, cache) | server | n/a |
 | [planned] `metrics` | Prometheus metrics endpoint | server | n/a |
 | [planned] `feature-flags` | Flag service + client hook | server, web, mobile, shared | n/a |
@@ -127,24 +135,10 @@ for inspection; successful projects are removed unless `--keep` is passed.
 
 ---
 
-## Recommended build order
-
-Roughly in order of leverage, the things nearly every product needs:
-
-1. **`email`**: unblocks verification, password reset, receipts (many features depend on it).
-2. **`query`**: the data-fetching layer both clients want; makes `api-client` ergonomic.
-3. **`jobs`** + **`cache-redis`**: async work + caching; unblocks webhooks, scheduler, metering.
-4. **`payments-stripe`** + **`subscriptions`**: if you're building SaaS.
-5. **`push`** / **`notifications`**: engagement for mobile-first products.
-6. **`sentry`** + **`logging`** + **`rate-limit`**: production hardening.
-7. **`forms`** (pairs with the already-built `ui-kit`): stop rebuilding validation every project.
-
-Everything above is additive: build the ones you need, in any order, and they show up in the
-picker for every future project.
-
 ## How to get one built
 
 - **Build it yourself**: follow [authoring-a-module.md](authoring-a-module.md); most are a
-  `module.json` + a few files, using the `storage` component as the abstract-provider template.
+  `module.json` + a few files, using `storage` (swappable provider) or `workflow-engine` / `rbac`
+  (verified core + wrapper) as reference templates.
 - **Ask**: describe the feature and its target apps, and it can be scaffolded into `modules/`
   following the same contract.

@@ -1,0 +1,27 @@
+{
+  "id": "api-keys",
+  "title": "API Keys (Verified Policy)",
+  "description": "Verified API key prefix, revocation, expiry, and scope validation kernel.",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./api-keys\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "API keys: validate_api_key enforces expiry, revocation, and scope checks via ApiKeyGuard."
+  ]
+}

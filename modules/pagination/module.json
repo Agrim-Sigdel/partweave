@@ -1,0 +1,27 @@
+{
+  "id": "pagination",
+  "title": "Cursor Pagination (Verified)",
+  "description": "Verified cursor encode/decode bijection and monotonic page window slicing.",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./pagination\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Pagination: use Paginator or build_page_window for safe bounded cursor slicing."
+  ]
+}

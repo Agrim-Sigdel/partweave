@@ -1,0 +1,27 @@
+{
+  "id": "multi-tenancy",
+  "title": "Multi-Tenancy Isolation",
+  "description": "Verified cross-tenant isolation predicate wrapped by a reusable tenant guard.",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./multi-tenancy\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Multi-tenancy: use check_tenant_access or TenantGuard to prove tenant isolation before ORM queries."
+  ]
+}

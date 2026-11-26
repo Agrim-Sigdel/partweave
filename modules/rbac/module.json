@@ -1,0 +1,27 @@
+{
+  "id": "rbac",
+  "title": "Role-Based Access Control (RBAC)",
+  "description": "Verified permission evaluation kernel with policy guard wrapper (401/403/superuser).",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./rbac\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "RBAC: call check_permission or PolicyGuard in rbac.wrapper to enforce permissions cleanly."
+  ]
+}

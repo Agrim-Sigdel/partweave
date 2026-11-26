@@ -82,9 +82,25 @@ present, `packages/api-client` (a typed client generated from the server's OpenA
 | `storage` | Reference *swappable provider*: `StorageProvider` ABC + Local/S3 backends |
 | `ui-kit` | Owned Button, Badge, Card, Container, and Input components for web |
 | `feedback` | Public feedback API and web/mobile forms, with a database migration; no auth required |
+| `workflow-engine` | Verified finite-state-machine engine + atomic transition wrapper (`server`, `shared`) |
+| `rbac` | Verified role/permission evaluator + `401`/`403` guard (`server`, `shared`) |
+| `multi-tenancy` | Verified cross-tenant isolation guard (`server`, `shared`) |
+| `api-keys` | Verified API key prefix/scope/expiry policy (`server`, `shared`) |
+| `audit-log` | Verified sensitive-field scrubber & diff recorder (`server`, `shared`) |
+| `pagination` | Verified cursor encode/decode & bounded page slicer (`server`, `shared`) |
+| `subscriptions` | Verified subscription lifecycle & proration math (`server`, `shared`) |
+| `metering` | Verified usage conservation & overage tracker (`server`, `shared`) |
+| `rate-limit` | Verified token-bucket math & `Retry-After` limiter (`server`, `shared`) |
+| `auth-2fa` | Verified RFC-6238 TOTP & single-use backup codes (`server`, `shared`) |
+| `ledger` | Verified double-entry zero-sum journal poster (`server`, `shared`) |
+| `pricing` | Verified integer-cent discounts, tax & total calculator (`server`, `shared`) |
+| `reservations` | Verified non-overlapping time slots & stock conservation (`server`, `shared`) |
+| `quorum` | Verified distinct-voter `k-of-n` approval/rejection state machine (`server`, `shared`) |
+| `filter-eval` | Verified allowlisted AST filter evaluator without `eval()` (`server`, `shared`) |
+| `resolve-dag` | Verified dependency closure, conflict check & topological planner (`server`, `shared`) |
 
-Unimplemented designs (`rbac`, `rate-limit`, `audit-log`, `workflow-engine`) live in
-[`docs/planned-modules/`](docs/planned-modules/README.md), outside the selectable catalog.
+See [verified-modules.md](docs/verified-modules.md) for how the 4 common wrapper templates
+pair with Dafny `spec.dfy` cores across those 16 modules.
 
 Dependencies resolve automatically (e.g. `example → auth → db-postgres`), and incompatible
 picks (a component that needs an app you didn't select) are rejected up front.
@@ -105,8 +121,9 @@ The output is a self-contained monorepo where each app can be developed and depl
 | Doc | Read it for |
 | --- | --- |
 | [creating-projects.md](docs/creating-projects.md) | **What you can create** — every app, component, flag, and common project shapes |
+| [verified-modules.md](docs/verified-modules.md) | **Verified-core modules** — the 16 Dafny-specified logic modules + 4 common wrapper templates |
 | [independent-workflows.md](docs/independent-workflows.md) | **Developing & deploying each part separately** — run/build/ship server, web, mobile on their own; split a part into its own repo |
-| [feature-catalog.md](docs/feature-catalog.md) | **The menu of reusable features** — what's available now + a roadmap so you never rewrite the same boilerplate |
+| [feature-catalog.md](docs/feature-catalog.md) | **The menu of reusable features** — all 24 available modules + the remaining roadmap |
 | [authoring-a-module.md](docs/authoring-a-module.md) | **How to add a feature** — recipes for server, client, ops, and swappable-provider components |
 | [module-contract.md](docs/module-contract.md) | The `module.json` manifest spec (anchors, targets, wiring) |
 

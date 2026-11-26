@@ -1,0 +1,27 @@
+{
+  "id": "workflow-engine",
+  "title": "Workflow / State Machine Engine",
+  "description": "Verified finite-state-machine core with atomic transition wrapper and immutable log.",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./workflow-engine\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Workflow engine: define WorkflowDefinition and wrap persistence with WorkflowRunner in workflow_engine.wrapper."
+  ]
+}

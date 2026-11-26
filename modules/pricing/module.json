@@ -1,0 +1,27 @@
+{
+  "id": "pricing",
+  "title": "Pricing, Discounts & Tax Engine",
+  "description": "Verified integer-cent coupon, cap-clamping, and tax calculation kernel.",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./pricing\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Pricing: PriceCalculator enforces bounded discounts and non-negative totals in cents."
+  ]
+}

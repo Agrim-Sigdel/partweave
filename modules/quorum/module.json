@@ -1,0 +1,27 @@
+{
+  "id": "quorum",
+  "title": "Approval & Quorum Rules",
+  "description": "Verified k-of-n distinct-voter approval threshold and resolution state machine.",
+  "kind": "feature",
+  "targets": [
+    "server",
+    "shared"
+  ],
+  "requiresApps": [
+    "server"
+  ],
+  "requires": [],
+  "default": false,
+  "wiring": {
+    "shared": {
+      "anchors": {
+        "exports": [
+          "export * from \"./quorum\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Quorum: QuorumEngine prevents duplicate votes and resolves approved/rejected thresholds cleanly."
+  ]
+}
