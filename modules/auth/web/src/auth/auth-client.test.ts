@@ -90,6 +90,19 @@ describe("shared auth client (createAuthClient)", () => {
     expect(tokenStore.setAccess).toHaveBeenCalledWith("NEW.ACCESS");
   });
 
+  it("persists a rotated refresh token when returned by /token/refresh", async () => {
+    storedRefresh = "REFRESH.TOKEN";
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ detail: "expired" }, 401))
+      .mockResolvedValueOnce(jsonResponse({ access: "NEW.ACCESS", refresh: "NEW.REFRESH" }))
+      .mockResolvedValueOnce(jsonResponse({ id: 1, email: "a@b.com" }));
+    await auth.fetchMe();
+    expect(tokenStore.set).toHaveBeenCalledWith({
+      access: "NEW.ACCESS",
+      refresh: "NEW.REFRESH",
+    });
+  });
+
   it("does not attempt refresh when there is no refresh token (surfaces the 401)", async () => {
     storedRefresh = null;
     fetchMock.mockResolvedValueOnce(jsonResponse({ detail: "no" }, 401));

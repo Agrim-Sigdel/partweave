@@ -7,6 +7,7 @@ import {
   buildEnvFiles,
   buildMakefile,
   buildRootPackageJson,
+  buildServerDockerfile,
   buildTaskRunner,
 } from "./rootgen.js";
 import type { Module, Selection } from "./types.js";
@@ -261,5 +262,15 @@ describe("package-manager install plans", () => {
     // Unix vs Windows invocation both reference the astral installer.
     expect(plan!.hint).toContain("astral.sh/uv/install");
     expect(pyPmInstallPlan("pip")).toBeNull();
+  });
+});
+
+describe("buildServerDockerfile security hardening", () => {
+  it("runs as a non-root user and avoids floating :latest tags", () => {
+    for (const pyPm of ["uv", "pip"] as const) {
+      const df = buildServerDockerfile(ctx({ apps: ["server"], pyPm }));
+      expect(df).toContain("USER appuser");
+      expect(df).not.toContain(":latest");
+    }
   });
 });

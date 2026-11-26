@@ -1,0 +1,100 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["javascript-typescript", "python"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  dependency-audit:
+    name: Dependency audits (repo npm + Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+      - name: Install JS workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Audit JS/TS dependencies (packages/cli + apps/website)
+        run: pnpm audit --audit-level=high
+      - name: Audit packages/api Python dependencies
+        run: uvx pip-audit -r packages/api/requirements.txt
+
+  generated-project-audit:
+    name: Audit scaffolded project (templates + Docker image)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter partweave build
+      - name: Scaffold full-stack project with security-sensitive modules
+        run: >
+          node packages/cli/dist/index.js create sec-app
+          --dir "$RUNNER_TEMP/sec-app"
+          --server --web --mobile
+          --with auth,docker,storage,feedback,example
+          --js-pm pnpm --py-pm uv --yes
+      - name: Install and audit generated JS/TS dependencies
+        working-directory: ${{ runner.temp }}/sec-app
+        run: |
+          pnpm install
+          pnpm audit --prod --audit-level=high
+      - name: Install and audit generated Python dependencies
+        working-directory: ${{ runner.temp }}/sec-app/apps/server
+        run: |
+          uv sync
+          uv run --with pip-audit pip-audit
+      - name: Build generated server Docker image
+        working-directory: ${{ runner.temp }}/sec-app
+        run: docker build -t partweave-server-sec apps/server
+      - name: Scan generated server Docker image with Trivy
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: partweave-server-sec
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"

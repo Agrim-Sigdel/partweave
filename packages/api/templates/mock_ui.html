@@ -621,10 +621,16 @@
         const conf = info.confidence;
         const confClass = conf >= 0.7 ? 'high' : conf >= 0.4 ? 'medium' : 'low';
 
-        li.innerHTML = `
-          <span class="module-item__name">${mid}</span>
-          <span class="module-item__confidence ${confClass}">${(conf * 100).toFixed(0)}%</span>
-        `;
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'module-item__name';
+        nameSpan.textContent = mid;
+
+        const confSpan = document.createElement('span');
+        confSpan.className = `module-item__confidence ${confClass}`;
+        confSpan.textContent = `${(conf * 100).toFixed(0)}%`;
+
+        li.appendChild(nameSpan);
+        li.appendChild(confSpan);
         moduleList.appendChild(li);
       }
 

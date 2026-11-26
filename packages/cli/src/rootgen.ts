@@ -181,7 +181,7 @@ export function buildTaskRunner(ctx: RenderContext, hasDocker: boolean): string 
     `function has(cmd) {`,
     `  const p = isWin`,
     `    ? spawnSync("where", [cmd], { stdio: "ignore" })`,
-    `    : spawnSync("sh", ["-c", "command -v " + cmd], { stdio: "ignore" });`,
+    `    : spawnSync("sh", ["-c", 'command -v "$1"', "_", cmd], { stdio: "ignore" });`,
     `  return p.status === 0;`,
     `}`,
     ``,
@@ -803,11 +803,15 @@ ENV PYTHONUNBUFFERED=1 \\
 
 WORKDIR /app
 
+RUN groupadd --system appgroup && useradd --system --gid appgroup --create-home appuser
+
 COPY . .
 RUN python3 -m venv .venv \\
     && .venv/bin/python -m pip install -U pip \\
-    && .venv/bin/python scripts/sync_deps.py --no-dev
+    && .venv/bin/python scripts/sync_deps.py --no-dev \\
+    && chown -R appuser:appgroup /app
 
+USER appuser
 EXPOSE 8000
 CMD [".venv/bin/gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
 `;
@@ -822,14 +826,17 @@ ENV PYTHONUNBUFFERED=1 \\
 
 WORKDIR /app
 
-# uv binary from the official distroless image
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Pin uv minor release instead of a floating tag.
+COPY --from=ghcr.io/astral-sh/uv:0.6 /uv /usr/local/bin/uv
+
+RUN groupadd --system appgroup && useradd --system --gid appgroup --create-home appuser
 
 COPY . .
-RUN uv sync --no-dev
+RUN uv sync --no-dev && chown -R appuser:appgroup /app
 
+USER appuser
 EXPOSE 8000
-CMD ["uv", "run", "gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["uv", "run", "--no-sync", "gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
 `;
 }
 

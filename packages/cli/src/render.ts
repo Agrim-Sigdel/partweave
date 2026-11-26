@@ -58,17 +58,29 @@ export function slugify(name: string): string {
     .replace(/-{2,}/g, "-");
 }
 
+export function sanitizeProjectName(name: string): string {
+  return name.replace(/[\x00-\x1f\x7f"\\]/g, " ").trim();
+}
+
 /**
  * Why `name` can't be used as a project name, or undefined if it's fine.
  * Shared by the interactive prompt (as its validate callback) and the
  * non-interactive flag path. A name that slugifies to "" is rejected because
  * the default target directory is `./${slugify(name)}` — an empty slug would
- * silently resolve to the current working directory.
+ * silently resolve to the current working directory. Control characters and
+ * quotes/backslashes are rejected so `projectName` cannot inject code or config
+ * into generated comments, JSON, TOML, or TSX literals.
  */
 export function projectNameError(name: string): string | undefined {
   const trimmed = name.trim();
   if (!trimmed) return "Project name is required.";
   if (trimmed.length > 64) return "Project name must be 64 characters or fewer.";
+  if (/[\x00-\x1f\x7f]/.test(name)) {
+    return "Project name must not contain control characters or newlines.";
+  }
+  if (/["\\]/.test(trimmed)) {
+    return 'Project name must not contain quotes (") or backslashes (\\).';
+  }
   if (!slugify(trimmed)) {
     return `"${trimmed}" contains no letters or digits to build a directory name from.`;
   }

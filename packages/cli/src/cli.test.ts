@@ -8,6 +8,9 @@ import { protectedDirReason } from "./fsutil.js";
 import { ENVELOPE_VERSION, errEnvelope, okEnvelope } from "./output.js";
 import { readVersion } from "./paths.js";
 import { projectNameError } from "./render.js";
+import { validateRegistryRef } from "./fetcher.js";
+import { listFiles } from "./fsutil.js";
+import { symlinkSync } from "node:fs";
 import { Registry } from "./registry.js";
 import { resolveModules, validateApps } from "./resolve.js";
 
@@ -198,6 +201,42 @@ describe("project name validation (guards the outDir derivation)", () => {
 
   it("rejects names over 64 characters", () => {
     expect(projectNameError("x".repeat(65))).toMatch(/64/);
+  });
+
+  it("rejects control characters, newlines, quotes, and backslashes", () => {
+    expect(projectNameError("demo\nprocess.exit(1)")).toMatch(/control/i);
+    expect(projectNameError("demo\r\n")).toMatch(/control/i);
+    expect(projectNameError('demo"quote')).toMatch(/quotes/i);
+    expect(projectNameError("demo\\slash")).toMatch(/backslashes/i);
+  });
+});
+
+describe("registry ref validation (guards git command injection & traversal)", () => {
+  it("accepts valid branches, tags, and commits", () => {
+    expect(validateRegistryRef("main")).toBe("main");
+    expect(validateRegistryRef("v0.6.0")).toBe("v0.6.0");
+    expect(validateRegistryRef("release/1.0")).toBe("release/1.0");
+  });
+
+  it("rejects traversal, option flags, and shell metacharacters", () => {
+    expect(() => validateRegistryRef("..")).toThrow(/Invalid PARTWEAVE_REGISTRY_REF/);
+    expect(() => validateRegistryRef("--upload-pack=evil")).toThrow(/Invalid PARTWEAVE_REGISTRY_REF/);
+    expect(() => validateRegistryRef("main;id")).toThrow(/Invalid PARTWEAVE_REGISTRY_REF/);
+    expect(() => validateRegistryRef("main$(id)")).toThrow(/Invalid PARTWEAVE_REGISTRY_REF/);
+    expect(() => validateRegistryRef("foo/../bar")).toThrow(/Invalid PARTWEAVE_REGISTRY_REF/);
+  });
+});
+
+describe("listFiles ignores symlinks", () => {
+  it("skips symlinks inside template trees", () => {
+    const dir = mkdtempSync(join(tmpdir(), "pw-symlink-"));
+    try {
+      writeFileSync(join(dir, "real.txt"), "ok");
+      symlinkSync("/etc/hosts", join(dir, "evil-link"));
+      expect(listFiles(dir)).toEqual(["real.txt"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

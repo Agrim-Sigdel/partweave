@@ -17,3 +17,16 @@ def test_audit_scrubber_and_diff() -> None:
     assert ev.diff == {"role": {"before": "viewer", "after": "editor"}}
     assert compute_diff({"a": 1}, {"a": 1}) == {}
     assert scrub_payload({"token": "x"})["token"] == "[REDACTED]"
+    scrubbed = scrub_payload(
+        {"access_token": "jwt", "client_secret": "s", "nested": ({"x_api_key": "k"},)}
+    )
+    assert scrubbed["access_token"] == "[REDACTED]"
+    assert scrubbed["client_secret"] == "[REDACTED]"
+    assert scrubbed["nested"][0]["x_api_key"] == "[REDACTED]"
+
+    deep: dict = {}
+    cur = deep
+    for _ in range(40):
+        cur["next"] = {}
+        cur = cur["next"]
+    assert isinstance(scrub_payload(deep), dict)

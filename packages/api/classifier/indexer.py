@@ -11,13 +11,19 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+_MODULE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+_INDEX_CACHE_TTL_SEC = 60.0
+_index_cache: dict[tuple[str, str], tuple[float, dict[str, Any]]] = {}
 
 
 def _run_git(args: list[str], cwd: str) -> str:
@@ -71,6 +77,8 @@ def get_module_history(
 
     Returns [{"hash": "abc1234", "date": "2026-09-15", "subject": "feat: ..."}, ...]
     """
+    if not _MODULE_ID_RE.match(module_id):
+        return []
     module_path = f"modules/{module_id}"
     raw = _run_git(
         [
@@ -121,6 +129,12 @@ def build_temporal_index(
     """
     modules_dir = modules_dir or settings.PARTWEAVE_MODULES_DIR
     repo_root = repo_root or settings.PARTWEAVE_REPO_ROOT
+    cache_key = (modules_dir, repo_root)
+    now = time.monotonic()
+    cached = _index_cache.get(cache_key)
+    if cached and (now - cached[0]) < _INDEX_CACHE_TTL_SEC:
+        return cached[1]
+
     modules_path = Path(modules_dir)
 
     index: dict[str, Any] = {
@@ -156,4 +170,5 @@ def build_temporal_index(
             "last_modified": history[0]["date"] if history else None,
         }
 
+    _index_cache[cache_key] = (now, index)
     return index

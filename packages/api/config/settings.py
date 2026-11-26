@@ -7,18 +7,28 @@ keyword-based classification when the key is absent.
 """
 
 import os
+import secrets
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-partweave-dev-only-change-in-production",
-)
+DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
+if DEBUG:
+    SECRET_KEY = os.environ.get(
+        "DJANGO_SECRET_KEY",
+        "django-insecure-partweave-dev-only-change-in-production",
+    )
+else:
+    # Stateless local service: require env key or generate an ephemeral per-process key
+    # rather than falling back to a publicly-known static string.
+    SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or secrets.token_urlsafe(50)
 
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+    if h.strip()
+]
 
 # ---------------------------------------------------------------------------
 # Partweave-specific
@@ -50,9 +60,16 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
 ]
 
-# Allow all origins in dev (the mock UI is served by Django itself, but
-# external tools/agents may call the JSON API).
-CORS_ALLOW_ALL_ORIGINS = DEBUG
+# Restrict CORS to explicit local origins by default (never allow all origins).
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get(
+        "DJANGO_CORS_ALLOWED_ORIGINS",
+        "http://127.0.0.1:8000,http://localhost:8000",
+    ).split(",")
+    if o.strip()
+]
 
 ROOT_URLCONF = "config.urls"
 

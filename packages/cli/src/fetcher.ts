@@ -1,4 +1,5 @@
-import { execSync, type ExecSyncOptions } from "node:child_process";
+import { execFileSync, type ExecFileSyncOptions } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
@@ -6,6 +7,38 @@ import pc from "picocolors";
 import { PartweaveError } from "./errors.js";
 
 export const REGISTRY_URL = "https://github.com/Agrim-Sigdel/partweave.git";
+
+const SAFE_REF_RE = /^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/;
+
+/**
+ * Validate a git ref from PARTWEAVE_REGISTRY_REF to prevent git option
+ * injection (leading `-`), path traversal (`..`), and invalid ref shapes.
+ */
+export function validateRegistryRef(ref: string): string {
+  const trimmed = ref.trim();
+  if (
+    !trimmed ||
+    !SAFE_REF_RE.test(trimmed) ||
+    trimmed.includes("..") ||
+    trimmed.endsWith("/") ||
+    trimmed.endsWith(".lock")
+  ) {
+    throw new PartweaveError(
+      "usage",
+      `Invalid PARTWEAVE_REGISTRY_REF "${ref}": must be a valid git branch, tag, or commit without ".." or leading "-".`,
+      { ref },
+    );
+  }
+  return trimmed;
+}
+
+function safeCacheSegment(ref: string): string {
+  const seg = ref.replace(/[/\\]/g, "-");
+  if (!seg || seg === "." || seg === ".." || !SAFE_REF_RE.test(seg) || seg.includes("..")) {
+    return "ref-" + createHash("sha256").update(ref).digest("hex").slice(0, 12);
+  }
+  return seg;
+}
 
 /**
  * Which git ref (branch, tag, or commit) to pull modules from. Defaults to
@@ -20,8 +53,7 @@ export const REGISTRY_DIR = join(
   homedir(),
   ".partweave",
   "registry",
-  // Refs can contain `/` (e.g. `release/1.0`); keep the cache path a single segment.
-  REGISTRY_REF.replace(/[/\\]/g, "-"),
+  safeCacheSegment(REGISTRY_REF),
 );
 
 /**
@@ -47,6 +79,7 @@ function gitStderr(err: any): string {
 }
 
 export function ensureRegistry(forceUpdate = false): void {
+  const ref = validateRegistryRef(REGISTRY_REF);
   // Gate on the catalog itself, not on `.git`. A clone interrupted partway
   // (Ctrl-C, dropped connection) leaves `.git` behind with no modules/ — and
   // gating on `.git` would then skip the re-clone forever, leaving the user
@@ -54,7 +87,7 @@ export function ensureRegistry(forceUpdate = false): void {
   const haveCatalog = existsSync(join(REGISTRY_DIR, "modules", "_core"));
 
   if (!haveCatalog) {
-    console.log(pc.cyan(`Downloading Partweave registry (${REGISTRY_REF}) from GitHub...`));
+    console.log(pc.cyan(`Downloading Partweave registry (${ref}) from GitHub...`));
     // Clone into a sibling temp dir and swap it in only once it's complete, so
     // a failed clone leaves nothing half-written behind to poison the retry.
     const staging = `${REGISTRY_DIR}.tmp`;
@@ -62,7 +95,7 @@ export function ensureRegistry(forceUpdate = false): void {
     mkdirSync(staging, { recursive: true });
     try {
       // --branch takes a branch OR a tag; --depth 1 keeps it a shallow, fast clone.
-      execSync(`git clone --depth 1 --branch ${REGISTRY_REF} ${REGISTRY_URL} .`, {
+      execFileSync("git", ["clone", "--depth", "1", "--branch", ref, "--", REGISTRY_URL, "."], {
         cwd: staging,
         stdio: ["ignore", "ignore", "pipe"],
       });
@@ -75,26 +108,26 @@ export function ensureRegistry(forceUpdate = false): void {
       rmSync(staging, { recursive: true, force: true });
       throw new PartweaveError(
         "fetch-failed",
-        `Failed to clone registry (${REGISTRY_REF}) from ${REGISTRY_URL}: ${gitStderr(err)}`,
+        `Failed to clone registry (${ref}) from ${REGISTRY_URL}: ${gitStderr(err)}`,
       );
     }
   } else if (forceUpdate) {
-    console.log(pc.cyan(`Updating Partweave registry (${REGISTRY_REF})...`));
+    console.log(pc.cyan(`Updating Partweave registry (${ref})...`));
     try {
       // fetch + reset works for a branch, tag, or commit alike (a plain `git pull`
       // fails on a detached tag checkout).
-      const opts: ExecSyncOptions = {
+      const opts: ExecFileSyncOptions = {
         cwd: REGISTRY_DIR,
         stdio: ["ignore", "ignore", "pipe"],
       };
-      execSync(`git fetch --depth 1 origin ${REGISTRY_REF}`, opts);
-      execSync(`git reset --hard FETCH_HEAD`, opts);
+      execFileSync("git", ["fetch", "--depth", "1", "origin", ref], opts);
+      execFileSync("git", ["reset", "--hard", "FETCH_HEAD"], opts);
       refreshed = true;
       console.log(pc.green(`✔ Registry updated successfully.`));
     } catch (err: any) {
       throw new PartweaveError(
         "update-failed",
-        `Failed to update registry (${REGISTRY_REF}): ${gitStderr(err)}`,
+        `Failed to update registry (${ref}): ${gitStderr(err)}`,
       );
     }
   } else {

@@ -77,9 +77,13 @@ export function createAuthClient({ baseUrl, tokenStore }: AuthClientOptions): Au
       body: JSON.stringify({ refresh }),
     });
     if (!res.ok) return false;
-    const data = (await res.json()) as { access?: string };
+    const data = (await res.json()) as { access?: string; refresh?: string };
     if (!data.access) return false;
-    await tokenStore.setAccess(data.access);
+    if (data.refresh) {
+      await tokenStore.set({ access: data.access, refresh: data.refresh });
+    } else {
+      await tokenStore.setAccess(data.access);
+    }
     return true;
   }
 

@@ -49,12 +49,14 @@ def eval_filter(
     expr: FilterExpr,
     record: Mapping[str, Any],
     allowlist: AbstractSet[str],
+    *,
+    max_depth: int = 8,
 ) -> bool:
-    validate_filter(expr, allowlist)
+    validate_filter(expr, allowlist, max_depth=max_depth)
     if isinstance(expr, EqExpr):
         return expr.field in record and record[expr.field] == expr.value
     if isinstance(expr, AndExpr):
-        return eval_filter(expr.left, record, allowlist) and eval_filter(
-            expr.right, record, allowlist
+        return eval_filter(expr.left, record, allowlist, max_depth=max_depth) and eval_filter(
+            expr.right, record, allowlist, max_depth=max_depth
         )
-    return not eval_filter(expr.inner, record, allowlist)
+    return not eval_filter(expr.inner, record, allowlist, max_depth=max_depth)

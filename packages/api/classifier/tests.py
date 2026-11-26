@@ -13,6 +13,9 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 import django
 django.setup()
 
+from django.conf import settings
+from django.test import Client
+
 from classifier.mock import classify_with_keywords
 
 
@@ -102,6 +105,51 @@ class TestKeywordClassifier(unittest.TestCase):
         for mid, info in d["modules"].items():
             self.assertIn("include", info)
             self.assertIn("confidence", info)
+
+
+class TestApiSecurityDefaults(unittest.TestCase):
+    def test_safe_defaults(self):
+        self.assertFalse(settings.DEBUG)
+        self.assertFalse(settings.CORS_ALLOW_ALL_ORIGINS)
+        self.assertNotIn("*", settings.ALLOWED_HOSTS)
+
+    def test_classify_enforces_origin_content_type_and_size(self):
+        client = Client(HTTP_HOST="127.0.0.1:8000")
+
+        # Non-JSON Content-Type rejected (blocks CORS simple POST requests)
+        r = client.post("/api/classify", data='{"description":"auth"}', content_type="text/plain")
+        self.assertEqual(r.status_code, 415)
+
+        # Untrusted cross-origin rejected
+        r = client.post(
+            "/api/classify",
+            data='{"description":"auth"}',
+            content_type="application/json",
+            HTTP_ORIGIN="https://evil.example",
+        )
+        self.assertEqual(r.status_code, 403)
+
+        # Oversized payload rejected
+        r = client.post(
+            "/api/classify",
+            data='{"description":"' + ("a" * 20000) + '"}',
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 413)
+
+        # Valid same-origin JSON request succeeds
+        r = client.post(
+            "/api/classify",
+            data='{"description":"SaaS app with login"}',
+            content_type="application/json",
+            HTTP_ORIGIN="http://127.0.0.1:8000",
+        )
+        self.assertEqual(r.status_code, 200)
+
+    def test_history_rejects_invalid_module_id(self):
+        client = Client(HTTP_HOST="127.0.0.1:8000")
+        r = client.get("/api/history/..invalid")
+        self.assertEqual(r.status_code, 400)
 
 
 if __name__ == "__main__":

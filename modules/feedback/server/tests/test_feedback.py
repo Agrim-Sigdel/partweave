@@ -35,3 +35,23 @@ def test_blank_feedback_is_rejected(client, message):
     )
     assert response.status_code == 400
     assert not Feedback.objects.exists()
+
+
+@pytest.mark.django_db
+def test_rating_bounds_and_message_max_length(client):
+    assert (
+        client.post(
+            "/api/feedback/",
+            {"message": "ok", "rating": 99},
+            content_type="application/json",
+        ).status_code
+        == 400
+    )
+    assert (
+        client.post(
+            "/api/feedback/",
+            {"message": "x" * 4001, "rating": 5},
+            content_type="application/json",
+        ).status_code
+        == 400
+    )

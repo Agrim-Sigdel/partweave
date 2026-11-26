@@ -16,3 +16,11 @@ def test_rate_limiter_bounds_and_refill() -> None:
     now[0] = 102
     assert limiter.enforce("ip:1").allowed
     assert consume_tokens(0, 5, 10, 2, 1).remaining == 4
+
+
+def test_rate_limiter_evicts_bounded_buckets() -> None:
+    now = [100]
+    limiter = RateLimiter(capacity=2, refill_per_sec=1, max_buckets=3, clock=lambda: now[0])
+    for i in range(10):
+        assert limiter.enforce(f"ip:{i}").allowed
+    assert len(limiter._buckets) <= 3

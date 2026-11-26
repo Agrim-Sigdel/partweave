@@ -13,13 +13,14 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 
 from .indexer import build_temporal_index, get_module_history
@@ -27,6 +28,22 @@ from .jev_client import classify_with_jev
 from .mock import classify_with_keywords
 
 logger = logging.getLogger(__name__)
+
+_MODULE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+_MAX_CLASSIFY_BODY_BYTES = 16 * 1024
+_MAX_DESCRIPTION_CHARS = 4000
+
+
+def _is_allowed_origin(request) -> bool:
+    """Reject cross-origin browser requests not matching Host or CORS_ALLOWED_ORIGINS."""
+    origin = request.META.get("HTTP_ORIGIN")
+    if not origin:
+        return True
+    if origin in getattr(settings, "CORS_ALLOWED_ORIGINS", []):
+        return True
+    parsed = urlparse(origin)
+    host = request.get_host()
+    return bool(parsed.netloc and parsed.netloc == host)
 
 
 def _load_catalog() -> list[dict[str, Any]]:
@@ -45,6 +62,10 @@ def _load_catalog() -> list[dict[str, Any]]:
             continue
         try:
             manifest = json.loads(manifest_path.read_text())
+            mid = manifest.get("id", "")
+            if not isinstance(mid, str) or not _MODULE_ID_RE.match(mid):
+                logger.warning("Skipping manifest with invalid id: %s", manifest_path)
+                continue
             catalog.append(manifest)
         except (json.JSONDecodeError, OSError):
             logger.warning("Skipping unreadable manifest: %s", manifest_path)
@@ -52,29 +73,26 @@ def _load_catalog() -> list[dict[str, Any]]:
     return catalog
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def classify(request):
     """
     POST /api/classify
 
     Body: {"description": "I'm building a SaaS app with..."}
-    Returns: {
-        "ok": true,
-        "result": {
-            "apps": {"server": true, "web": true, "mobile": false},
-            "modules": {"auth": {"include": true, "confidence": 0.92}, ...},
-            "complexity": 0.72,
-            "maturity": 0.5,
-            "using_fallback": false
-        },
-        "selection": {
-            "apps": ["server", "web"],
-            "modules": ["auth", "db-postgres", "storage"],
-            "cli_command": "partweave create my-app --server --web --with auth,db-postgres,storage"
-        }
-    }
     """
+    if not _is_allowed_origin(request):
+        return JsonResponse({"ok": False, "error": "Origin not allowed"}, status=403)
+
+    if request.content_type != "application/json":
+        return JsonResponse(
+            {"ok": False, "error": "Content-Type must be application/json"}, status=415
+        )
+
+    if len(request.body) > _MAX_CLASSIFY_BODY_BYTES:
+        return JsonResponse(
+            {"ok": False, "error": "Request body too large"}, status=413
+        )
+
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
@@ -82,10 +100,25 @@ def classify(request):
             {"ok": False, "error": "Invalid JSON body"}, status=400
         )
 
-    description = body.get("description", "").strip()
+    if not isinstance(body, dict):
+        return JsonResponse(
+            {"ok": False, "error": "JSON body must be an object"}, status=400
+        )
+
+    raw_desc = body.get("description", "")
+    if not isinstance(raw_desc, str):
+        return JsonResponse(
+            {"ok": False, "error": "'description' must be a string"}, status=400
+        )
+    description = raw_desc.strip()
     if not description:
         return JsonResponse(
             {"ok": False, "error": "Missing 'description' field"}, status=400
+        )
+    if len(description) > _MAX_DESCRIPTION_CHARS:
+        return JsonResponse(
+            {"ok": False, "error": f"Description exceeds {_MAX_DESCRIPTION_CHARS} characters"},
+            status=400,
         )
 
     catalog = _load_catalog()
@@ -155,6 +188,8 @@ def history(request, module_id=None):
     GET /api/history/<id>     — history for a single module
     """
     if module_id:
+        if not _MODULE_ID_RE.match(module_id):
+            return JsonResponse({"ok": False, "error": "Invalid module id"}, status=400)
         commits = get_module_history(
             module_id, settings.PARTWEAVE_REPO_ROOT
         )

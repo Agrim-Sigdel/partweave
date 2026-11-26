@@ -10,7 +10,7 @@ import {
 import { copyTree, readIfExists, writeFileEnsured } from "./fsutil.js";
 import { DEFAULT_JS_PM, DEFAULT_PY_PM, jsPmProfile } from "./pm.js";
 import type { Registry } from "./registry.js";
-import { isBinaryPath, slugify } from "./render.js";
+import { isBinaryPath, sanitizeProjectName, slugify } from "./render.js";
 import {
   buildAgentsGuide,
   buildEnvFiles,
@@ -136,10 +136,12 @@ export function buildContext(selection: Selection): RenderContext {
   const hasMobile = selection.apps.includes("mobile");
   const hasShared = hasWeb || hasMobile;
   const hasApiClient = hasServer && (hasWeb || hasMobile);
+  const safeName = sanitizeProjectName(selection.projectName) || "my-app";
+  const safeSlug = slugify(safeName) || "my-app";
   return {
-    projectName: selection.projectName,
-    projectSlug: slugify(selection.projectName),
-    description: `${selection.projectName} — generated with partweave.`,
+    projectName: safeName,
+    projectSlug: safeSlug,
+    description: `${safeName} — generated with partweave.`,
     apps: selection.apps,
     hasServer,
     hasWeb,

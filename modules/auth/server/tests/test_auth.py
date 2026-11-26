@@ -61,3 +61,18 @@ def test_register_ignores_stale_token():
         HTTP_AUTHORIZATION="Bearer this.is.a.stale.garbage.token",
     )
     assert r.status_code == 201, r.content
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("bad_password", ["12345678", "password", "user@example.com"])
+def test_register_enforces_django_password_validators(bad_password):
+    from django.test import Client
+
+    client = Client()
+    r = client.post(
+        "/api/auth/register",
+        {"email": "user@example.com", "password": bad_password},
+        content_type="application/json",
+    )
+    assert r.status_code == 400
+    assert "password" in r.json()

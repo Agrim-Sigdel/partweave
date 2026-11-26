@@ -1,10 +1,10 @@
 import {
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
@@ -47,7 +47,9 @@ export function listFiles(root: string): string[] {
   const walk = (dir: string): void => {
     for (const name of readdirSync(dir)) {
       const abs = join(dir, name);
-      if (statSync(abs).isDirectory()) walk(abs);
+      const st = lstatSync(abs);
+      if (st.isSymbolicLink()) continue;
+      if (st.isDirectory()) walk(abs);
       else out.push(relative(root, abs));
     }
   };

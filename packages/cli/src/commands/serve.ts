@@ -8,7 +8,7 @@
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { spawn, execSync } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import pc from "picocolors";
 import { findPackagesRoot } from "../paths.js";
 
@@ -23,7 +23,7 @@ function findPython(apiDir: string): string | null {
   const venvPython = join(apiDir, ".venv", "bin", "python");
   if (existsSync(venvPython)) {
     try {
-      const version = execSync(`${venvPython} --version`, {
+      const version = execFileSync(venvPython, ["--version"], {
         encoding: "utf8",
         stdio: ["pipe", "pipe", "pipe"],
       }).trim();
@@ -35,7 +35,7 @@ function findPython(apiDir: string): string | null {
 
   for (const cmd of ["python3", "python"]) {
     try {
-      const version = execSync(`${cmd} --version`, {
+      const version = execFileSync(cmd, ["--version"], {
         encoding: "utf8",
         stdio: ["pipe", "pipe", "pipe"],
       }).trim();
@@ -49,7 +49,7 @@ function findPython(apiDir: string): string | null {
 
 function checkDjango(python: string): boolean {
   try {
-    execSync(`${python} -c "import django"`, {
+    execFileSync(python, ["-c", "import django"], {
       stdio: ["pipe", "pipe", "pipe"],
     });
     return true;
@@ -92,7 +92,7 @@ export async function runServe(flags: ServeFlags): Promise<void> {
         " Django not installed. Installing dependencies...",
     );
     try {
-      execSync(`${python} -m pip install -r ${join(apiDir, "requirements.txt")}`, {
+      execFileSync(python, ["-m", "pip", "install", "-r", join(apiDir, "requirements.txt")], {
         stdio: "inherit",
       });
     } catch {

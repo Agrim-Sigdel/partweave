@@ -20,3 +20,13 @@ def test_totp_and_single_use_backup_code() -> None:
             backup_codes=res2.remaining_backup_codes,
             submitted="b1",
         )
+
+
+def test_totp_replay_in_same_step_is_rejected() -> None:
+    secret = b"12345678901234567890"
+    verifier = TwoFactorVerifier(clock=lambda: 90)  # step = 3
+    code = compute_totp(secret, 3)
+
+    assert verifier.verify(secret_bytes=secret, backup_codes=set(), submitted=code).ok
+    with pytest.raises(TwoFactorFailedError):
+        verifier.verify(secret_bytes=secret, backup_codes=set(), submitted=code)

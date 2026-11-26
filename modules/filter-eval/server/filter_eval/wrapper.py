@@ -25,4 +25,8 @@ class SafeFilterRunner:
             validate_filter(expr, self.allowed_fields, max_depth=self.max_depth)
         except (TypeError, ValueError) as exc:
             raise UnsafeFilterError(str(exc)) from exc
-        return [r for r in records if eval_filter(expr, r, self.allowed_fields)]
+        return [
+            r
+            for r in records
+            if eval_filter(expr, r, self.allowed_fields, max_depth=self.max_depth)
+        ]

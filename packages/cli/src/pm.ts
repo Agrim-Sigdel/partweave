@@ -153,7 +153,7 @@ export function hasCommand(cmd: string): boolean {
     const probe =
       process.platform === "win32"
         ? spawnSync("where", [cmd], { stdio: "ignore" })
-        : spawnSync("sh", ["-c", `command -v ${cmd}`], { stdio: "ignore" });
+        : spawnSync("sh", ["-c", 'command -v "$1"', "_", cmd], { stdio: "ignore" });
     return probe.status === 0;
   } catch {
     return false;

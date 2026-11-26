@@ -8,6 +8,12 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+### Security
+- **CLI generator hardening:** Validated `PARTWEAVE_REGISTRY_REF` and switched `fetcher.ts` to `execFileSync` (preventing command injection and `..` cache deletion), enforced directory containment in `partweave extract --from`, rejected control characters/quotes/backslashes in `projectName` (`render.ts` / `compose.ts`), switched `serve.ts` and `hasCommand` away from interpolated shell strings, skipped symlinks in `listFiles`, and hardened `buildServerDockerfile` with a non-root `appuser` and pinned `uv` image tag.
+- **Classification API (`packages/api`) hardening:** Defaulted `DEBUG` and `CORS_ALLOW_ALL_ORIGINS` to `False`, restricted `ALLOWED_HOSTS` to localhost, replaced the hardcoded production `SECRET_KEY` fallback with an ephemeral per-process key, enforced JSON `Content-Type`, origin checks, and payload size limits on `/api/classify`, validated module IDs and cached temporal indexing in `indexer.py`, and replaced `innerHTML` in `mock_ui.html` with `textContent`.
+- **Module template hardening:** Enforced Django `AUTH_PASSWORD_VALIDATORS` in `RegisterSerializer` and enabled JWT refresh-token rotation/blacklisting (`auth`), added constant-time backup-code comparison and TOTP time-step replay protection (`auth-2fa`), expanded `audit-log` redaction and added recursion depth bounds, added bounded bucket eviction in `rate-limit`, and added length/range validation in `FeedbackSerializer`.
+- **Automated CI security coverage:** Added `.github/workflows/security.yml` (CodeQL for JS/TS + Python, `pnpm audit`, `pip-audit`, generated-project dependency audit, and Trivy container scanning) and `.github/dependabot.yml` covering repo and `_core` template ecosystems.
+
 ### Changed
 - **License: Apache-2.0 → MIT.** Dropped the `NOTICE` file, patent grant, and trademark
   reservation clause in favor of a plain, permissive MIT license.

@@ -240,6 +240,22 @@ describe("runExtract (end-to-end)", () => {
     // self-contained feature (only django imports) → no requires
     expect(mod.requires).toEqual([]);
   });
+
+  it("rejects path traversal and absolute paths in --from", async () => {
+    const registry = new Registry();
+    const projDir = mkTmp("pw-proj-sec-");
+    const selection = { projectName: "demo", outDir: projDir, apps: ["server" as const], modules: [] };
+    const targets = selectedTargets(buildContext(selection));
+    compose({ selection, registry, scaffoldTargets: targets, wireTargets: targets, rootFiles: "all" });
+    writeProjectManifest(projDir, { name: "demo", apps: ["server"], modules: [] });
+
+    await expect(runExtract("evil", { dir: projDir, from: "../../etc/passwd" })).rejects.toThrow(
+      /escapes project directory/i,
+    );
+    await expect(runExtract("evil", { dir: projDir, from: "/etc/passwd" })).rejects.toThrow(
+      /must be relative/i,
+    );
+  });
 });
 
 describe("resolveModules sanity (guards the round-trip catalog path)", () => {

@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { intro, log, outro } from "@clack/prompts";
 import pc from "picocolors";
 import { buildContext, compose, selectedTargets } from "../compose.js";
@@ -189,13 +189,24 @@ export async function runExtract(id: string, flags: ExtractFlags): Promise<void>
 
   const targets = new Set<TargetName>();
   for (const p of paths) {
+    if (isAbsolute(p)) {
+      throw new PartweaveError("usage", `Source path must be relative to the project root: ${p}`);
+    }
     const srcPath = resolve(dir, p);
+    const relFromDir = relative(dir, srcPath);
+    if (!relFromDir || relFromDir === ".." || relFromDir.startsWith("..") || isAbsolute(relFromDir)) {
+      throw new PartweaveError("usage", `Source path escapes project directory: ${p}`);
+    }
     if (!existsSync(srcPath)) {
       throw new PartweaveError("not-found", `Source path does not exist: ${srcPath}`);
     }
     const { target, rel } = classifyPath(p);
+    const destPath = resolve(outDir, rel);
+    const relToOut = relative(outDir, destPath);
+    if (!relToOut || relToOut === ".." || relToOut.startsWith("..") || isAbsolute(relToOut)) {
+      throw new PartweaveError("usage", `Source path escapes extraction directory: ${p}`);
+    }
     targets.add(target);
-    const destPath = join(outDir, rel);
     mkdirSync(dirname(destPath), { recursive: true });
     cpSync(srcPath, destPath, { recursive: true });
     log.info(`Copied ${p} -> ${rel}`);
