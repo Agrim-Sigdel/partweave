@@ -10,12 +10,13 @@ export function FeedbackForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!message.trim() || status === "loading") return;
     setStatus("loading");
     try {
       const res = await fetch(`${API_URL}/api/feedback/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, message, rating: 5 }),
+        body: JSON.stringify({ name: name.trim(), message: message.trim(), rating: 5 }),
       });
       if (!res.ok) throw new Error("Failed to submit");
       setStatus("success");
@@ -35,6 +36,7 @@ export function FeedbackForm() {
         Name
         <input 
           type="text" 
+          maxLength={255}
           value={name} 
           onChange={(e) => setName(e.target.value)} 
           className="border p-2 rounded"
@@ -54,14 +56,14 @@ export function FeedbackForm() {
 
       <button 
         type="submit" 
-        disabled={status === "loading"}
+        disabled={status === "loading" || !message.trim()}
         className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-50"
       >
         {status === "loading" ? "Submitting..." : "Submit"}
       </button>
 
-      {status === "success" && <p className="text-green-600">Thank you for your feedback!</p>}
-      {status === "error" && <p className="text-red-600">Something went wrong. Please try again.</p>}
+      {status === "success" && <p role="status" className="text-green-600">Thank you for your feedback!</p>}
+      {status === "error" && <p role="alert" className="text-red-600">Something went wrong. Please try again.</p>}
     </form>
   );
 }

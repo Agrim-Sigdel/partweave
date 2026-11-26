@@ -1,8 +1,5 @@
 name: CI
 
-# Generates real projects from the templates and runs their checks, so a broken
-# module can't be published. Runs on PRs/pushes and is called by publish.yml
-# (via workflow_call) so a release is blocked unless the generated output is green.
 on:
   push:
     branches: [main]
@@ -16,21 +13,11 @@ env:
   CLI: "partweave"
 
 jobs:
-  # A small matrix of app/module combinations — not just the one big combo — so
-  # single-app scaffolds and the passWithNoTests path are exercised too (F28).
-  js:
-    name: "js: ${{ matrix.combo }}"
+  generator:
+    name: generator and catalog contract
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - combo: full (server+web+mobile)
-            flags: "--server --web --mobile --with auth,storage,example"
-          - combo: web-only
-            flags: "--web --no-server --no-mobile"
-          - combo: server+web+auth
-            flags: "--server --web --no-mobile --with auth"
+    outputs:
+      matrix: ${{ steps.catalog.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -38,33 +25,22 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - name: Build the generator
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm --filter "$CLI" build
-      - name: Scaffold
-        run: node packages/cli/dist/index.js create app --dir "$RUNNER_TEMP/app" ${{ matrix.flags }} --yes
-      - name: Install generated deps
-        working-directory: ${{ runner.temp }}/app
-        run: pnpm install
-      - name: Typecheck every package
-        working-directory: ${{ runner.temp }}/app
-        run: pnpm -r typecheck
-      - name: Unit tests (web vitest + mobile jest)
-        working-directory: ${{ runner.temp }}/app
-        run: pnpm -r test
-      - name: Web production build
-        if: contains(matrix.flags, '--web')
-        working-directory: ${{ runner.temp }}/app
-        run: pnpm --filter web build
-      - name: Mobile bundle (expo export)
-        if: contains(matrix.flags, '--mobile')
-        working-directory: ${{ runner.temp }}/app/apps/mobile
-        run: npx expo export --platform android --output-dir "$RUNNER_TEMP/expo-out"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter partweave typecheck
+      - run: pnpm --filter partweave test
+      - run: pnpm --filter partweave build
+      - id: catalog
+        name: Discover selectable module checks
+        run: node packages/cli/scripts/check-catalog.mjs --matrix | sed 's/^/matrix=/' >> "$GITHUB_OUTPUT"
 
-  server:
-    name: server tests (pytest + postgres, incl. storage)
+  catalog:
+    name: "generated: ${{ matrix.id }}"
+    needs: generator
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.generator.outputs.matrix) }}
     services:
       postgres:
         image: postgres:16
@@ -85,24 +61,16 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - name: Build the generator
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm --filter "$CLI" build
-      # Include storage so its pytest (test_storage.py) actually runs in CI (F28).
-      - name: Scaffold server + web with auth + storage
-        run: node packages/cli/dist/index.js create app --dir "$RUNNER_TEMP/app" --server --web --no-mobile --with auth,storage --yes
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@v5
-      - name: Install deps + run server tests
-        working-directory: ${{ runner.temp }}/app/apps/server
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter partweave build
+      - name: Install, typecheck, test, migrate and build generated apps
         env:
-          DATABASE_URL: postgres://app:app@localhost:5432/app
-        run: |
-          uv sync
-          uv run pytest -q
+          PARTWEAVE_TEST_DATABASE_URL: postgres://app:app@localhost:5432/app
+        run: node packages/cli/scripts/check-catalog.mjs --case "${{ matrix.id }}" --dir "$RUNNER_TEMP/catalog"
 
   docker:
     name: docker build (server image)

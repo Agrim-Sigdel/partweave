@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Partweave — Smart Classifier</title>
+  <meta name="description" content="Describe your project and get an instant recommendation of which partweave modules to scaffold.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-card: #1a1a26;
+      --bg-hover: #222233;
+      --border: #2a2a3d;
+      --border-glow: #6366f1;
+      --text-primary: #e4e4ef;
+      --text-secondary: #8888a0;
+      --text-muted: #55556a;
+      --accent: #6366f1;
+      --accent-light: #818cf8;
+      --accent-dim: rgba(99, 102, 241, 0.15);
+      --success: #22c55e;
+      --success-dim: rgba(34, 197, 94, 0.15);
+      --warning: #f59e0b;
+      --warning-dim: rgba(245, 158, 11, 0.15);
+      --error: #ef4444;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font-sans: 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* --- Layout --- */
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem;
+    }
+
+    /* --- Header --- */
+    .header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .header__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--accent-dim);
+      color: var(--accent-light);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+
+    .header__badge .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent-light);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+
+    .header p {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    /* --- Input area --- */
+    .input-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      transition: border-color 0.3s ease;
+    }
+
+    .input-card:focus-within {
+      border-color: var(--border-glow);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .input-card label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      margin-bottom: 0.75rem;
+    }
+
+    #description {
+      width: 100%;
+      min-height: 120px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      padding: 1rem;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+
+    #description:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    #description::placeholder { color: var(--text-muted); }
+
+    .input-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 1rem;
+    }
+
+    .backend-badge {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .backend-badge .indicator {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+
+    .backend-badge .indicator.jev { background: var(--success); }
+    .backend-badge .indicator.fallback { background: var(--warning); }
+
+    .btn-classify {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, var(--accent), #4f46e5);
+      color: white;
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.7rem 1.5rem;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .btn-classify:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-classify:active { transform: translateY(0); }
+
+    .btn-classify:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-classify .spinner {
+      display: none;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    .btn-classify.loading .spinner { display: block; }
+    .btn-classify.loading .btn-text { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- Results --- */
+    .results { display: none; }
+    .results.visible { display: block; }
+
+    .result-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .result-section__title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+
+    /* Apps */
+    .apps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+
+    .app-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 0.9rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .app-chip.on {
+      background: var(--success-dim);
+      color: var(--success);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .app-chip.off {
+      background: var(--bg-secondary);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      text-decoration: line-through;
+    }
+
+    /* Modules */
+    .module-list { list-style: none; }
+
+    .module-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .module-item:last-child { border-bottom: none; }
+
+    .module-item__name {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .module-item__confidence {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .module-item__confidence.high {
+      background: var(--success-dim);
+      color: var(--success);
+    }
+
+    .module-item__confidence.medium {
+      background: var(--warning-dim);
+      color: var(--warning);
+    }
+
+    .module-item__confidence.low {
+      background: var(--bg-secondary);
+      color: var(--text-muted);
+    }
+
+    /* Scores */
+    .scores-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .score-meter {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .score-meter__label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .score-meter__bar {
+      height: 6px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .score-meter__fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-light));
+      transition: width 0.6s ease;
+    }
+
+    /* CLI command */
+    .cli-command {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .cli-command code {
+      flex: 1;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--accent-light);
+      word-break: break-all;
+    }
+
+    .cli-command .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .cli-command .copy-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent-light);
+    }
+
+    /* Error */
+    .error-msg {
+      display: none;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--error);
+      padding: 0.8rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+
+    .error-msg.visible { display: block; }
+
+    /* Fallback banner */
+    .fallback-banner {
+      display: none;
+      background: var(--warning-dim);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: var(--warning);
+      padding: 0.6rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .fallback-banner.visible { display: block; }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 3rem;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .footer a {
+      color: var(--accent-light);
+      text-decoration: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .container { padding: 2rem 1rem; }
+      .header h1 { font-size: 1.5rem; }
+      .apps-grid { grid-template-columns: 1fr; }
+      .scores-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header__badge">
+        <span class="dot"></span>
+        Smart Classifier
+      </div>
+      <h1>Partweave Classifier</h1>
+      <p>Describe your project and get an instant recommendation of which apps and modules to scaffold.</p>
+    </header>
+
+    <div class="input-card">
+      <label for="description">Project Description</label>
+      <textarea
+        id="description"
+        placeholder="I'm building a SaaS platform where teams can upload documents, collaborate in real-time, and manage user permissions..."
+      ></textarea>
+      <div class="input-actions">
+        <div class="backend-badge">
+          {% if has_jev %}
+            <span class="indicator jev"></span>
+            Jev (TypeSafe AI)
+          {% else %}
+            <span class="indicator fallback"></span>
+            Keyword fallback (no API key)
+          {% endif %}
+        </div>
+        <button class="btn-classify" id="classify-btn" type="button">
+          <span class="spinner"></span>
+          <span class="btn-text">Classify →</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="error-msg" id="error-msg"></div>
+    <div class="fallback-banner" id="fallback-banner">
+      ⚡ Using keyword-based fallback classifier. Set <code>TYPESAFE_API_KEY</code> for Jev-powered results.
+    </div>
+
+    <div class="results" id="results">
+      <!-- Apps -->
+      <div class="result-section">
+        <div class="result-section__title">Recommended Apps</div>
+        <div class="apps-grid" id="apps-grid"></div>
+      </div>
+
+      <!-- Modules -->
+      <div class="result-section">
+        <div class="result-section__title">Recommended Modules</div>
+        <ul class="module-list" id="module-list"></ul>
+      </div>
+
+      <!-- Scores -->
+      <div class="result-section">
+        <div class="result-section__title">Project Signals</div>
+        <div class="scores-row">
+          <div class="score-meter">
+            <div class="score-meter__label">
+              <span>Complexity</span>
+              <span id="complexity-val">—</span>
+            </div>
+            <div class="score-meter__bar">
+              <div class="score-meter__fill" id="complexity-bar" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="score-meter">
+            <div class="score-meter__label">
+              <span>Maturity</span>
+              <span id="maturity-val">—</span>
+            </div>
+            <div class="score-meter__bar">
+              <div class="score-meter__fill" id="maturity-bar" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CLI Command -->
+      <div class="result-section">
+        <div class="result-section__title">CLI Command</div>
+        <div class="cli-command">
+          <code id="cli-cmd">—</code>
+          <button class="copy-btn" id="copy-btn" type="button">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      Partweave Smart Classifier · <a href="https://github.com/Agrim-Sigdel/partweave" target="_blank" rel="noopener">GitHub</a>
+    </footer>
+  </div>
+
+  <script>
+    const btn = document.getElementById('classify-btn');
+    const textarea = document.getElementById('description');
+    const results = document.getElementById('results');
+    const errorMsg = document.getElementById('error-msg');
+    const fallbackBanner = document.getElementById('fallback-banner');
+
+    btn.addEventListener('click', async () => {
+      const description = textarea.value.trim();
+      if (!description) {
+        showError('Please describe your project first.');
+        return;
+      }
+
+      hideError();
+      fallbackBanner.classList.remove('visible');
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/classify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description }),
+        });
+
+        const data = await res.json();
+
+        if (!data.ok) {
+          showError(data.error || 'Classification failed.');
+          return;
+        }
+
+        renderResults(data);
+      } catch (err) {
+        showError('Network error — is the server running?');
+      } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    });
+
+    // Allow Ctrl+Enter to submit.
+    textarea.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        btn.click();
+      }
+    });
+
+    document.getElementById('copy-btn').addEventListener('click', () => {
+      const cmd = document.getElementById('cli-cmd').textContent;
+      navigator.clipboard.writeText(cmd).then(() => {
+        const copyBtn = document.getElementById('copy-btn');
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+      });
+    });
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.classList.add('visible');
+      results.classList.remove('visible');
+    }
+
+    function hideError() {
+      errorMsg.classList.remove('visible');
+    }
+
+    function renderResults(data) {
+      const { result, selection } = data;
+
+      // Fallback banner
+      if (result.using_fallback) {
+        fallbackBanner.classList.add('visible');
+      }
+
+      // Apps
+      const appsGrid = document.getElementById('apps-grid');
+      appsGrid.innerHTML = '';
+      const appLabels = { server: '🖥 Server (Django)', web: '🌐 Web (Next.js)', mobile: '📱 Mobile (Expo)' };
+      for (const [app, label] of Object.entries(appLabels)) {
+        const on = result.apps[app];
+        const chip = document.createElement('div');
+        chip.className = `app-chip ${on ? 'on' : 'off'}`;
+        chip.textContent = `${on ? '✓' : '✗'} ${label}`;
+        appsGrid.appendChild(chip);
+      }
+
+      // Modules
+      const moduleList = document.getElementById('module-list');
+      moduleList.innerHTML = '';
+      const sortedModules = Object.entries(result.modules)
+        .sort(([, a], [, b]) => b.confidence - a.confidence);
+
+      for (const [mid, info] of sortedModules) {
+        if (!info.include) continue;
+        const li = document.createElement('li');
+        li.className = 'module-item';
+
+        const conf = info.confidence;
+        const confClass = conf >= 0.7 ? 'high' : conf >= 0.4 ? 'medium' : 'low';
+
+        li.innerHTML = `
+          <span class="module-item__name">${mid}</span>
+          <span class="module-item__confidence ${confClass}">${(conf * 100).toFixed(0)}%</span>
+        `;
+        moduleList.appendChild(li);
+      }
+
+      if (moduleList.children.length === 0) {
+        moduleList.innerHTML = '<li class="module-item"><span class="module-item__name" style="color:var(--text-muted)">No modules recommended</span></li>';
+      }
+
+      // Scores
+      const complexityPct = (result.complexity * 100).toFixed(0);
+      const maturityPct = (result.maturity * 100).toFixed(0);
+      document.getElementById('complexity-val').textContent = `${complexityPct}%`;
+      document.getElementById('complexity-bar').style.width = `${complexityPct}%`;
+      document.getElementById('maturity-val').textContent = `${maturityPct}%`;
+      document.getElementById('maturity-bar').style.width = `${maturityPct}%`;
+
+      // CLI command
+      document.getElementById('cli-cmd').textContent = selection.cli_command;
+
+      results.classList.add('visible');
+    }
+  </script>
+</body>
+</html>

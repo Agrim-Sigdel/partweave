@@ -77,11 +77,20 @@ Run the exact checks CI runs against a generated project:
 
 ```sh
 pnpm --filter partweave build
-pnpm cli create t --dir /tmp/t --server --web --mobile --with auth,storage,ci --force
-cd /tmp/t && pnpm install
-pnpm -r typecheck && pnpm -r test                       # web + mobile
-cd apps/server && uv sync && uv run pytest -q            # server (set DATABASE_URL for a real DB)
+pnpm --filter partweave test
+pnpm --filter partweave test:catalog --case module-feedback
+# Omit --case to check every selectable module, bare apps, and combined features.
 ```
+
+Replace `module-feedback` with `module-<your-id>`. CI discovers these cases from
+the CLI catalog automatically. Postgres modules need a disposable database with
+database-creation privileges (`PARTWEAVE_TEST_DATABASE_URL`); each case creates and
+removes its own database. Checks include ordinary migrations before pytest so a
+missing migration cannot be hidden by Django's test database setup.
+
+Keep unfinished designs under `docs/planned-modules/`. A manifest under `modules/`
+immediately makes the feature selectable, so add it only with working templates,
+resolvable dependencies, and passing generated-project checks.
 
 Prefer a **regression test that fails without your fix**: assert the wrong behavior is gone, not
 just that the happy path works. Also confirm `partweave add notifications` works on an existing

@@ -85,18 +85,13 @@ describe("Registry — CHANGELOG.md parsing", () => {
     expect(registry.get("m")!.changelog).toBeUndefined();
   });
 
-  it("matches the real Keep-a-Changelog-style format used by modules/rbac, rate-limit, audit-log", () => {
-    const registry = new Registry();
-    for (const id of ["rbac", "rate-limit", "audit-log"]) {
-      const mod = registry.get(id);
-      expect(mod, `module "${id}" should exist in the real catalog`).toBeDefined();
-      expect(mod!.changelog).toEqual([
-        {
-          version: "Unreleased",
-          changes: ["Initial `SPEC.md` drafted.", "Module manifest `module.json` created."],
-        },
-      ]);
-    }
+  it("parses an Unreleased section with Keep-a-Changelog subheadings", () => {
+    const root = catalogDir();
+    writeModule(root, { id: "m", title: "M", targets: ["root"] },
+      "# Changelog\n\n## [Unreleased]\n\n### Added\n- First feature.\n\n### Fixed\n- Wiring fix.\n");
+    expect(new Registry(root).require("m").changelog).toEqual([
+      { version: "Unreleased", changes: ["First feature.", "Wiring fix."] },
+    ]);
   });
 });
 

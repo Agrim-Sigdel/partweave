@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Button, StyleSheet } from "react-native";
 import { API_URL } from "@/lib/config";
 
 export function FeedbackScreen() {
@@ -8,13 +8,13 @@ export function FeedbackScreen() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
   const handleSubmit = async () => {
-    if (!message) return;
+    if (!message.trim() || status === "loading") return;
     setStatus("loading");
     try {
       const res = await fetch(`${API_URL}/api/feedback/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, message, rating: 5 }),
+        body: JSON.stringify({ name: name.trim(), message: message.trim(), rating: 5 }),
       });
       if (!res.ok) throw new Error("Failed to submit");
       setStatus("success");
@@ -36,6 +36,8 @@ export function FeedbackScreen() {
         value={name} 
         onChangeText={setName} 
         placeholder="Your name"
+        accessibilityLabel="Name"
+        maxLength={255}
       />
 
       <Text style={styles.label}>Message</Text>
@@ -44,6 +46,7 @@ export function FeedbackScreen() {
         value={message} 
         onChangeText={setMessage} 
         placeholder="Your feedback..."
+        accessibilityLabel="Message"
         multiline
         numberOfLines={4}
       />
@@ -51,7 +54,7 @@ export function FeedbackScreen() {
       <Button 
         title={status === "loading" ? "Submitting..." : "Submit"} 
         onPress={handleSubmit} 
-        disabled={status === "loading"} 
+        disabled={status === "loading" || !message.trim()}
       />
 
       {status === "success" && <Text style={styles.success}>Thank you for your feedback!</Text>}

@@ -1,15 +1,23 @@
 {
   "id": "feedback",
-  "title": "Feedback (Extracted Full-Stack Module)",
-  "description": "A full-stack user feedback feature (Django backend + Next.js web + Expo mobile).",
+  "title": "Feedback",
+  "description": "Public feedback submissions with Django persistence and web/mobile forms; works without auth.",
   "targets": ["server", "web", "mobile"],
   "requiresApps": ["server"],
   "wiring": {
     "server": {
-      "anchors": {
-        "installed-apps": ["\"feedback\",\n"],
-        "urls": ["path(\"api/feedback/\", include(\"feedback.urls\")),\n"]
-      }
+      "installedApps": ["\"feedback\","],
+      "urls": ["path(\"api/feedback/\", include(\"feedback.urls\")),"]
+    },
+    "web": {
+      "routes": ["{ href: \"/feedback\", label: \"Feedback\" },"]
+    },
+    "mobile": {
+      "routes": ["{ href: \"/feedback\", label: \"Feedback\" },"]
     }
-  }
+  },
+  "notes": [
+    "Run the project's migrate task to create the feedback table, then open /feedback on web or mobile.",
+    "Feedback submissions and the feedback list at /api/feedback/ are public. Restrict the view permissions before collecting private feedback."
+  ]
 }

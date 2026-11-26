@@ -107,6 +107,8 @@ Derived automatically:
 | `docker` | Postgres `docker-compose.yml` + production `Dockerfile` | server, root | — |
 | `ci` | Per-app GitHub Actions with path filters | root | — |
 | `storage` | `StorageProvider` ABC + Local/S3 backends (the swappable-provider reference) | server | — |
+| `feedback` | Public feedback API, migration, and web/mobile forms | server, web, mobile | server app; no auth dependency |
+| `ui-kit` | Button, Badge, Card, Container, and Input primitives | web | web app |
 
 > More components (payments, notifications, email, realtime, …) are on the roadmap — see
 > [feature-catalog.md](feature-catalog.md). Each is added by dropping a new folder into `modules/`.

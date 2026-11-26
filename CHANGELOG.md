@@ -13,16 +13,19 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
   reservation clause in favor of a plain, permissive MIT license.
 
 ### Fixed
+- **Selectable catalog and feedback.** Moved unfinished `rbac`, `rate-limit`, `audit-log`, and `workflow-engine` designs into `docs/planned-modules/`, so the CLI and classifier no longer offer broken modules. Feedback now ships a database migration, a reachable Next.js route, web/mobile navigation, and submission tests. Client API URL configuration lives in the core templates, so feedback works without auth.
+- **Catalog verification.** Every selectable module is composed across its supported app selections and both JS package managers. CI discovers individual module cases automatically and installs, typechecks, tests, and builds generated clients, plus checks and applies Django migrations. Bare apps, combined features, and npm/pip feedback are checked separately.
 - **`docker` module: compose project name collision across projects.** `db:up`/`db:down` never passed `docker compose -p <name>`, so Compose fell back to naming every project after the containing folder — which is always `infra/` in a generated app. Every locally-scaffolded partweave project with the `docker` module therefore shared the same container (`infra-db-1`) and volume (`infra_pgdata`), silently reusing (or losing) each other's database data and fighting over port 5432. Fixed by scoping `docker compose` to `-p <projectSlug>`, so containers/volumes are namespaced per project (e.g. `my-app-db-1`, `my-app_pgdata`). Caught while smoke-testing a freshly generated project: `migrate` reported "No migrations to apply" on a database that had never been migrated in this project before.
 
 ### Module Catalog Changes
-- **`rbac`** (New Module): Role-Based Access Control boilerplate with decorators and permission classes.
-- **`rate-limit`** (New Module): Throttling presets (Burst/Sustained) for endpoints.
-- **`audit-log`** (New Module): Immutable security logging for requests and state changes.
+- **`rbac`** (Design only): Role-Based Access Control spec; implementation pending in `docs/planned-modules/`.
+- **`rate-limit`** (Design only): Throttling spec; implementation pending in `docs/planned-modules/`.
+- **`audit-log`** (Design only): Audit logging spec; implementation pending in `docs/planned-modules/`.
 - **`workflow-engine`** (New Module, spec-only): Dependency-free finite-state-machine engine for driving any model through a declared lifecycle, with an immutable transition log.
 - **`ui-kit`** (New Module): Owned Button/Badge/Card/Container/Input primitives (cva + `cn`), stock Tailwind zinc/blue palette with `dark:` support — no `tailwind.config.ts`/`globals.css` changes required. Built by hand-adding the components to a real generated project and running `partweave extract` on it, so the module.json's `wiring.deps` and `targets` are machine-inferred, not guessed — round-trip validated before landing in the catalog.
 
 ### Added
+- **`docs/v2-verified-core.md`:** Architectural vision for `partweave` v2 combining mathematically verified pure logic cores (via proof writers such as Dafny / Lean 4 / F\*) with common framework template wrappers.
 - **`AGENTS.md` generation.** Every `partweave create` now also writes an `AGENTS.md` at the project root (alongside `README.md`) — a file map, per-app test commands in the project's chosen package managers, and a step-by-step "add a feature" recipe, tailored to whichever apps/modules were selected. Not regenerated on `add`, so hand edits are preserved (same lifecycle as `README.md`).
 
 

@@ -80,6 +80,11 @@ present, `packages/api-client` (a typed client generated from the server's OpenA
 | `docker` | Postgres `docker-compose.yml` + a production `Dockerfile` |
 | `ci` | Per-app GitHub Actions with path filters (independent builds) |
 | `storage` | Reference *swappable provider*: `StorageProvider` ABC + Local/S3 backends |
+| `ui-kit` | Owned Button, Badge, Card, Container, and Input components for web |
+| `feedback` | Public feedback API and web/mobile forms, with a database migration; no auth required |
+
+Unimplemented designs (`rbac`, `rate-limit`, `audit-log`, `workflow-engine`) live in
+[`docs/planned-modules/`](docs/planned-modules/README.md), outside the selectable catalog.
 
 Dependencies resolve automatically (e.g. `example → auth → db-postgres`), and incompatible
 picks (a component that needs an app you didn't select) are rejected up front.

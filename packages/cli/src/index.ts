@@ -6,11 +6,12 @@ import { runExtract } from "./commands/extract.js";
 import { runList } from "./commands/list.js";
 import { runExplore } from "./commands/explore.js";
 import { runPlan } from "./commands/plan.js";
+import { runServe, type ServeFlags } from "./commands/serve.js";
 import { toPartweaveError } from "./errors.js";
 import { readVersion, hasLocalModules } from "./paths.js";
 import { ensureRegistry } from "./fetcher.js";
 
-export { runCreate, runAdd, runDoctor, runExtract, runList, runExplore, runPlan };
+export { runCreate, runAdd, runDoctor, runExtract, runList, runExplore, runPlan, runServe };
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -20,8 +21,10 @@ export function buildProgram(): Command {
     .version(readVersion(), "-V, --version", "print the partweave version")
     .option("--update", "force update the module registry from GitHub")
     .hook("preAction", (thisCommand, actionCommand) => {
-      // Don't fetch registry if extracting local modules (it doesn't need it)
-      if (actionCommand.name() === "extract") return;
+      // Don't fetch registry for extract (local modules) or serve (reads
+      // modules/ directly via Django).
+      const skip = new Set(["extract", "serve"]);
+      if (skip.has(actionCommand.name())) return;
       const forceUpdate = thisCommand.opts().update === true;
       if (!hasLocalModules() || forceUpdate) {
         ensureRegistry(forceUpdate);
@@ -112,6 +115,15 @@ export function buildProgram(): Command {
     .option("-d, --dir <path>", "project directory (default: cwd)")
     .action(async (opts: { dir?: string }) => {
       await runDoctor(opts);
+    });
+
+  program
+    .command("serve")
+    .description("Start the Jev-powered classification API server")
+    .option("-p, --port <number>", "port to listen on (default: 8000)", parseInt)
+    .option("--host <addr>", "host to bind to (default: 127.0.0.1)")
+    .action(async (opts: ServeFlags) => {
+      await runServe(opts);
     });
 
   return program;

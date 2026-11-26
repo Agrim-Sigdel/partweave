@@ -95,3 +95,28 @@ export function hasLocalModules(): boolean {
 
   return false;
 }
+
+/**
+ * Locate the `packages/` directory (parent of `packages/cli/`). The serve
+ * command needs this to find `packages/api/`. Walks up from this file looking
+ * for a directory containing both `cli` and the target.
+ */
+export function findPackagesRoot(): string {
+  let cur = here;
+  for (let i = 0; i < 8; i++) {
+    // When running from src → cur might be packages/cli/src; from dist →
+    // packages/cli/dist. Check if ../packages/ or ../../packages/ exists.
+    for (const candidate of [join(cur, ".."), join(cur, "..", ".."), join(cur, "..", "..", "..")]) {
+      const resolved = resolve(candidate);
+      if (existsSync(join(resolved, "cli")) && existsSync(join(resolved, "api"))) {
+        return resolved;
+      }
+    }
+    const parent = dirname(cur);
+    if (parent === cur) break;
+    cur = parent;
+  }
+  // Last resort: assume the standard monorepo layout.
+  const fallback = resolve(here, "..", "..");
+  return fallback;
+}

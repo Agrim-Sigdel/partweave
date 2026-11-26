@@ -17,6 +17,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+*.sqlite3
 
 # os / editor
 .DS_Store

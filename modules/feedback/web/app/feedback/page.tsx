@@ -1,4 +1,4 @@
-import { FeedbackForm } from "../../feedback/FeedbackForm";
+import { FeedbackForm } from "@/feedback/FeedbackForm";
 
 export default function FeedbackPage() {
   return (

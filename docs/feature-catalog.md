@@ -24,6 +24,29 @@ Legend: `[built]` available now · `[planned]` on the roadmap (spec below, not b
 | [built] `ci` | Per-app GitHub Actions (path-filtered) | root | n/a |
 | [built] `storage` | `StorageProvider` ABC + Local/S3 (the swappable-provider reference) | server | provides `storage` |
 | [built] `ui-kit` | Owned Button/Badge/Card/Container/Input primitives (cva + cn), stock Tailwind zinc/blue palette with dark: support | web | n/a |
+| [built] `feedback` | Public feedback API, database migration, and linked web/mobile submission forms | server, web, mobile | requires server; works without auth |
+
+Only implemented modules live in `modules/` and appear in CLI/API discovery.
+The draft designs for `rbac`, `rate-limit`, `audit-log`, and `workflow-engine`
+live in [planned-modules/](planned-modules/README.md) until implemented and tested.
+
+Every selectable module gets its own generated-project CI job, with only its
+declared dependencies. Checks cover installation, typechecks, client tests and
+builds, Django migrations and tests. Separate cases cover bare apps, the combined
+catalog, and feedback using npm/pip. Run the same checks locally after building:
+
+```sh
+pnpm --filter partweave build
+pnpm --filter partweave test:catalog
+# Or one case; keep its generated project for inspection:
+pnpm --filter partweave test:catalog --case module-feedback --keep
+```
+
+Postgres cases use the generated connection defaults unless
+`PARTWEAVE_TEST_DATABASE_URL` points to a disposable test database. That database's
+user needs permission to create databases; each case creates and removes its own
+isolated database. SQLite cases run without Postgres. Failed projects are retained
+for inspection; successful projects are removed unless `--keep` is passed.
 
 ---
 
