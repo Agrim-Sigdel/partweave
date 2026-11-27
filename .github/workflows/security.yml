@@ -23,7 +23,7 @@ jobs:
       matrix:
         language: ["javascript-typescript", "python"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
@@ -36,7 +36,7 @@ jobs:
     name: Dependency audits (repo npm + Python)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v5
         with:
@@ -57,7 +57,7 @@ jobs:
     name: Audit scaffolded project (templates + Docker image)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v5
         with:
