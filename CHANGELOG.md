@@ -8,6 +8,9 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+### Changed
+- **CI: upgrade GitHub Actions to Node 24 runtime.** Bumped `actions/checkout` v4→v5, `actions/setup-node` v4→v5, `pnpm/action-setup` v4→v5, `actions/setup-python` v5→v6, and `astral-sh/setup-uv` v5→v7 across all workflows to eliminate the Node.js 20 deprecation warning.
+
 ## [0.7.1] - 2026-11-28
 
 ### Security

@@ -23,7 +23,7 @@ jobs:
       matrix:
         language: ["javascript-typescript", "python"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
@@ -36,16 +36,16 @@ jobs:
     name: Dependency audits (repo npm + Python)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       - name: Install JS workspace dependencies
         run: pnpm install --frozen-lockfile
       - name: Audit JS/TS dependencies (packages/cli + apps/website)
@@ -57,16 +57,16 @@ jobs:
     name: Audit scaffolded project (templates + Docker image)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter partweave build
       - name: Scaffold full-stack project with security-sensitive modules
