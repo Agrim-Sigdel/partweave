@@ -8,6 +8,8 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-28
+
 ### Security
 - **CLI unused/deprecated dependency cleanup:** Removed unused `tar` and deprecated `@types/tar` from `packages/cli/package.json` and `pnpm-lock.yaml`.
 - **Repo and generated-project dependency audits:** Updated `zod` (`^4.6.7`, migrated `ManifestSchema` record/partialRecord definitions in `packages/cli/src/types.ts`), `vitest` (`^4.1.12`) + `vite` (`^8.4.0`), `apps/website` (`next` `^15.5.29`, `postcss` `^8.5.34`), and `pnpm.overrides` (`esbuild`, `postcss`, `postcss-selector-parser`, `sharp`, `nanoid`, `source-map-js`) so `pnpm audit` passes with zero advisories.
@@ -194,7 +196,8 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 - Initial published release (under the former `quick-build` name).
 
-[Unreleased]: https://github.com/Agrim-Sigdel/partweave/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/Agrim-Sigdel/partweave/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/Agrim-Sigdel/partweave/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/Agrim-Sigdel/partweave/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Agrim-Sigdel/partweave/compare/v0.5.0...v0.6.0
 [0.3.3]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.2...v0.3.3
