@@ -274,11 +274,35 @@ describe("package-manager install plans", () => {
 });
 
 describe("buildServerDockerfile security hardening", () => {
-  it("runs as a non-root user and avoids floating :latest tags", () => {
+  it("patches the base OS, pins uv, and runs as a non-root user", () => {
     for (const pyPm of ["uv", "pip"] as const) {
       const df = buildServerDockerfile(ctx({ apps: ["server"], pyPm }));
       expect(df).toContain("USER appuser");
       expect(df).not.toContain(":latest");
+      expect(df).toContain("apt-get update && apt-get upgrade -y");
     }
+    expect(buildServerDockerfile(ctx({ apps: ["server"], pyPm: "uv" }))).toContain(
+      "ghcr.io/astral-sh/uv:0.13.10",
+    );
+  });
+});
+
+describe("generated GitHub Actions versions", () => {
+  it("uses actions compatible with the Node 24 runner", () => {
+    const workflows = buildCiWorkflows(
+      ctx({ apps: ["server", "web", "mobile"], jsPm: "pnpm", pyPm: "uv" }),
+    );
+    const all = Object.values(workflows).join("\n");
+    expect(all).toContain("actions/checkout@v5");
+    expect(all).toContain("actions/setup-node@v5");
+    expect(all).toContain("pnpm/action-setup@v5");
+    expect(all).toContain("astral-sh/setup-uv@v7");
+    expect(all).not.toMatch(/actions\/(?:checkout|setup-node)@v4/);
+  });
+
+  it("uses setup-python v6 for pip projects", () => {
+    const workflows = buildCiWorkflows(ctx({ apps: ["server"], pyPm: "pip" }));
+    expect(workflows[".github/workflows/server.yml"]).toContain("actions/setup-python@v6");
+    expect(workflows[".github/workflows/server.yml"]).not.toContain("actions/setup-python@v5");
   });
 });

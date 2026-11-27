@@ -8,6 +8,10 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+### Fixed
+- **Generated Docker image security scan:** Upgrade Debian packages in both generated server Dockerfile variants and pin the copied `uv` binary to 0.13.10, which includes the latest upstream security fix.
+- **Generated CI action runtime warning:** Upgrade generated workflows to checkout/setup-node v5, setup-python v6, pnpm/action-setup v5, and setup-uv v7 so they run on Node 24 without the Node 20 deprecation warning.
+
 ### Changed
 - **CI: upgrade GitHub Actions to Node 24 runtime.** Bumped `actions/checkout` v4→v5, `actions/setup-node` v4→v5, `pnpm/action-setup` v4→v5, `actions/setup-python` v5→v6, and `astral-sh/setup-uv` v5→v7 across all workflows to eliminate the Node.js 20 deprecation warning.
 

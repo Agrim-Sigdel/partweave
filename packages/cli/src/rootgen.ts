@@ -504,7 +504,7 @@ export function buildEnvFiles(ctx: RenderContext, modules: Module[]): EnvFile[] 
 /** GitHub Actions steps (8-space indented, under `steps:`) that set up the JS PM and install. */
 function jsCiSteps(ctx: RenderContext): string {
   if (ctx.jsPm === "npm") {
-    return `      - uses: actions/setup-node@v4
+    return `      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - run: npm install`;
@@ -515,8 +515,8 @@ function jsCiSteps(ctx: RenderContext): string {
   // without a lockfile to hash. So we drop both here. Once you commit the
   // generated pnpm-lock.yaml, add `cache: pnpm` back and switch to
   // --frozen-lockfile for reproducible, cached installs.
-  return `      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+  return `      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - run: pnpm install --no-frozen-lockfile`;
@@ -526,7 +526,7 @@ function jsCiSteps(ctx: RenderContext): string {
 function serverCiSteps(ctx: RenderContext): string {
   const py = pyPmProfile(ctx.pyPm);
   if (ctx.pyPm === "pip") {
-    return `      - uses: actions/setup-python@v5
+    return `      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: ${py.syncInServer}
@@ -534,7 +534,7 @@ function serverCiSteps(ctx: RenderContext): string {
       - run: ${py.run("python manage.py migrate")}
       - run: ${py.run("pytest -q")}`;
   }
-  return `      - uses: astral-sh/setup-uv@v5
+  return `      - uses: astral-sh/setup-uv@v7
       - run: ${py.syncInServer}
       - run: ${py.run("ruff check .")}
       - run: ${py.run("python manage.py migrate")}
@@ -560,7 +560,7 @@ ${permissions}jobs:
       run:
         working-directory: apps/server
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 ${serverCiSteps(ctx)}
 `;
   }
@@ -575,7 +575,7 @@ ${permissions}jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 ${jsCiSteps(ctx)}
       - run: ${js.run("web", "typecheck")}
       - run: ${js.run("web", "build")}
@@ -592,7 +592,7 @@ ${permissions}jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 ${jsCiSteps(ctx)}
       - run: ${js.run("mobile", "typecheck")}
 `;
@@ -810,6 +810,8 @@ ENV PYTHONUNBUFFERED=1 \\
 
 WORKDIR /app
 
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --system appgroup && useradd --system --gid appgroup --create-home appuser
 
 COPY . .
@@ -833,8 +835,11 @@ ENV PYTHONUNBUFFERED=1 \\
 
 WORKDIR /app
 
-# Pin uv minor release instead of a floating tag.
-COPY --from=ghcr.io/astral-sh/uv:0.6 /uv /usr/local/bin/uv
+# Patch OS-level CVEs in the base image before adding application code.
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
+# Pin a patched uv release instead of a floating tag.
+COPY --from=ghcr.io/astral-sh/uv:0.13.10 /uv /usr/local/bin/uv
 
 RUN groupadd --system appgroup && useradd --system --gid appgroup --create-home appuser
 
