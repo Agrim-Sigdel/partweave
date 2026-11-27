@@ -127,6 +127,12 @@ describe("buildRootPackageJson", () => {
     // web-only sees only whatwg-encoding@3, none of the Expo/RN packages.
     const web = JSON.parse(buildRootPackageJson(ctx({ apps: ["web"], jsPm: "pnpm" }), false)!);
     expect(web.pnpm.allowedDeprecatedVersions).toEqual({ "whatwg-encoding": "3" });
+    expect(both.pnpm.overrides).toMatchObject({
+      postcss: ">=8.5.23",
+      "image-size": ">=2.0.3",
+      "decode-uri-component": ">=0.5.1",
+    });
+    expect(web.pnpm.overrides).toEqual({ postcss: ">=8.5.23" });
 
     // npm has no such field; a server-only project has no JS deprecations at all.
     expect(JSON.parse(buildRootPackageJson(ctx({ apps: ["web"], jsPm: "npm" }), false)!).pnpm)

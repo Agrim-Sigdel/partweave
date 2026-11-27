@@ -8,6 +8,11 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+### Security
+- **Repo and generated-project dependency audits:** Updated `tar` (`^7.5.24`), `zod` (`^4.6.7`, migrated `ManifestSchema` record/partialRecord definitions in `packages/cli/src/types.ts`), `vitest` (`^4.1.12`) + `vite` (`^8.4.0`), `apps/website` (`next` `^15.5.29`, `postcss` `^8.5.34`), and `pnpm.overrides` (`esbuild`, `postcss`, `postcss-selector-parser`, `sharp`, `nanoid`, `source-map-js`) so `pnpm audit` passes with zero advisories.
+- **Generated template overrides:** Bumped `modules/_core/web/package.json` (`next` `^15.5.29`, `postcss` `^8.5.34`) and added `pnpm.overrides` (`postcss`, `image-size`, `decode-uri-component`) in `buildRootPackageJson` so scaffolded projects pass `pnpm audit --prod --audit-level=high`.
+- **Security workflow actions:** Updated `.github/workflows/security.yml` to `aquasecurity/trivy-action@v0.36.0` (replacing removed `0.30.0`) and `github/codeql-action/*@v4`.
+
 ## [0.7.0] - 2026-11-27
 
 ### Security

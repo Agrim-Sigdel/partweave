@@ -106,8 +106,17 @@ export function buildRootPackageJson(
       allowed["whatwg-encoding"] =
         ctx.hasWeb && ctx.hasMobile ? "2 || 3" : ctx.hasWeb ? "3" : "2";
     }
-    if (Object.keys(allowed).length > 0) {
-      pkg.pnpm = { allowedDeprecatedVersions: allowed };
+    const overrides: Record<string, string> = {};
+    if (ctx.hasWeb || ctx.hasMobile) overrides.postcss = ">=8.5.23";
+    if (ctx.hasMobile) {
+      overrides["image-size"] = ">=2.0.3";
+      overrides["decode-uri-component"] = ">=0.5.1";
+    }
+    if (Object.keys(allowed).length > 0 || Object.keys(overrides).length > 0) {
+      pkg.pnpm = {
+        ...(Object.keys(allowed).length > 0 ? { allowedDeprecatedVersions: allowed } : {}),
+        ...(Object.keys(overrides).length > 0 ? { overrides } : {}),
+      };
     }
   }
   return JSON.stringify(pkg, null, 2) + "\n";

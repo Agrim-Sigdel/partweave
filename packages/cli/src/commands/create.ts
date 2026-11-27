@@ -1,10 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { confirm, intro, isCancel, log, note, outro, spinner } from "@clack/prompts";
 import pc from "picocolors";
 import { renderBanner } from "../banner.js";
 import { buildContext, compose, selectedTargets, skippedTargetsNote } from "../compose.js";
+import { resolvePreset } from "../presets.js";
 import {
   detectJsPm,
   detectPyPm,
@@ -32,6 +33,7 @@ export interface CreateFlags {
   web?: boolean;
   mobile?: boolean;
   with?: string; // comma-separated module ids
+  preset?: string; // barbershop | florist | escrow-market | saas
   jsPm?: string; // pnpm | npm
   pyPm?: string; // uv | pip
   yes?: boolean;
@@ -120,13 +122,15 @@ export async function runCreate(flags: CreateFlags): Promise<void> {
 
 async function createInner(flags: CreateFlags, json: boolean): Promise<void> {
   const flagApps = appsFromFlags(flags);
+  const presetSpec = flags.preset ? resolvePreset(flags.preset) : null;
   // A3 — never hang headless: no TTY, --json, --non-interactive, --yes, or any
-  // explicit app flag all switch off prompting.
+  // explicit app/preset flag all switch off prompting.
   const nonInteractive =
     json ||
     flags.nonInteractive === true ||
     flags.yes === true ||
     flagApps !== null ||
+    presetSpec !== null ||
     !process.stdout.isTTY;
 
   if (!json) {
@@ -140,8 +144,8 @@ async function createInner(flags: CreateFlags, json: boolean): Promise<void> {
 
   let choices: RawChoices;
   if (nonInteractive) {
-    const apps = flagApps ?? [...APPS];
-    const name = flags.name ?? "my-app";
+    const apps = flagApps ?? (presetSpec ? [...presetSpec.apps] : [...APPS]);
+    const name = flags.name ?? (presetSpec ? presetSpec.id : "my-app");
     const nameProblem = projectNameError(name);
     if (nameProblem) {
       throw new PartweaveError("usage", `Invalid --name: ${nameProblem}`, { name });
@@ -150,7 +154,9 @@ async function createInner(flags: CreateFlags, json: boolean): Promise<void> {
     const modules =
       flags.with !== undefined
         ? flags.with.split(",").map((s) => s.trim()).filter(Boolean)
-        : defaultModules(registry, apps);
+        : presetSpec
+          ? [...presetSpec.modules]
+          : defaultModules(registry, apps);
     choices = { projectName: name, outDir, apps, modules, jsPm, pyPm };
   } else {
     choices = await promptCreate(
@@ -258,6 +264,18 @@ async function createInner(flags: CreateFlags, json: boolean): Promise<void> {
       jsPm: choices.jsPm,
       pyPm: choices.pyPm,
     });
+    if (presetSpec) {
+      for (const envFile of ["apps/web/.env", "apps/web/.env.example"]) {
+        const full = join(tmp, envFile);
+        if (existsSync(full)) {
+          const text = readFileSync(full, "utf8").replace(
+            /^NEXT_PUBLIC_DEFAULT_VERTICAL=.*/m,
+            `NEXT_PUBLIC_DEFAULT_VERTICAL=${presetSpec.defaultVertical}`,
+          );
+          writeFileSync(full, text, "utf8");
+        }
+      }
+    }
     // Move into place. With --force we replace an existing target (F23 — no more
     // merging onto a populated dir); the non-empty guard above already rejected a
     // populated target when --force was absent.

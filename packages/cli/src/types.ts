@@ -41,7 +41,7 @@ const WiringForTargetSchema = z.object({
   providers: z.array(z.string()).optional(), // web/mobile → <partweave:providers>
   routes: z.array(z.string()).optional(), // web/mobile → <partweave:routes>
   deps: z.array(z.string()).optional(), // merged into pyproject/package.json
-  anchors: z.record(z.array(z.string())).optional(), // generic anchorId → lines
+  anchors: z.record(z.string(), z.array(z.string())).optional(), // generic anchorId → lines
 });
 export type WiringForTarget = z.infer<typeof WiringForTargetSchema>;
 
@@ -80,9 +80,9 @@ export const ManifestSchema = z.object({
   /** capability/interface this module satisfies (for conflict grouping) */
   provides: z.string().optional(),
   /** env keys → default value; routed to the consuming app's .env/.env.example by prefix (POSTGRES_→root, NEXT_PUBLIC_→web, EXPO_PUBLIC_→mobile, else server) */
-  env: z.record(z.string()).default({}),
+  env: z.record(z.string(), z.string()).default({}),
   /** per-target wiring (files are copied separately from wiring injection) */
-  wiring: z.record(z.enum(TARGETS), WiringForTargetSchema).default({}),
+  wiring: z.partialRecord(z.enum(TARGETS), WiringForTargetSchema).default({}),
   /**
    * Soft-join wiring, keyed by capability. `enhances[cap]` is applied ONLY when
    * some *other* present module `provides` that capability — so `feedback` can
@@ -95,12 +95,12 @@ export const ManifestSchema = z.object({
    * exactly like `wiring`.
    */
   enhances: z
-    .record(z.string(), z.record(z.enum(TARGETS), WiringForTargetSchema))
+    .record(z.string(), z.partialRecord(z.enum(TARGETS), WiringForTargetSchema))
     .default({}),
   /** whether this module is offered by default in the interactive picker */
   default: z.boolean().default(false),
   /** options that allow conditional extraction */
-  options: z.record(z.object({
+  options: z.record(z.string(), z.object({
     type: z.enum(["boolean", "string"]),
     default: z.union([z.boolean(), z.string()]),
     description: z.string().optional()

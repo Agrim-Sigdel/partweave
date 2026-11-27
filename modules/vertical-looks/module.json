@@ -1,0 +1,35 @@
+{
+  "id": "vertical-looks",
+  "title": "Vertical Presets & Multi-Look UI",
+  "description": "Reusable LookProvider (Storefront / Scheduler / Ledger Pro) and VerticalProvider presets (escrow, barber, florist, saas) for Next.js.",
+  "kind": "feature",
+  "targets": [
+    "web"
+  ],
+  "requiresApps": [
+    "web"
+  ],
+  "requires": [
+    "ui-kit"
+  ],
+  "env": {
+    "NEXT_PUBLIC_DEFAULT_VERTICAL": "escrow"
+  },
+  "wiring": {
+    "web": {
+      "providers": [
+        "LookProvider,",
+        "VerticalProvider,"
+      ],
+      "anchors": {
+        "providers-import": [
+          "import { LookProvider } from \"@/features/looks/look-context\";",
+          "import { VerticalProvider } from \"@/features/verticals/vertical-config\";"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "Set NEXT_PUBLIC_DEFAULT_VERTICAL=barber|florist|saas|escrow in apps/web/.env to pick the default business vertical."
+  ]
+}

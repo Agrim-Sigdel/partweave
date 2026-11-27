@@ -10,6 +10,7 @@ import {
   type SkippedTarget,
 } from "../compose.js";
 import { emitError, emitSuccess } from "../output.js";
+import { resolvePreset } from "../presets.js";
 import { Registry } from "../registry.js";
 import { resolveModules, validateApps } from "../resolve.js";
 import { APPS, type AppName, type TargetName } from "../types.js";
@@ -21,6 +22,7 @@ export interface PlanFlags {
   web?: boolean;
   mobile?: boolean;
   with?: string;
+  preset?: string;
   json?: boolean;
 }
 
@@ -56,15 +58,18 @@ export async function runPlan(flags: PlanFlags): Promise<void> {
   const json = flags.json === true;
   try {
     const registry = new Registry();
-    const apps = appsFromFlags(flags) ?? [...APPS];
+    const presetSpec = flags.preset ? resolvePreset(flags.preset) : null;
+    const apps = appsFromFlags(flags) ?? (presetSpec ? [...presetSpec.apps] : [...APPS]);
     const requested = flags.with
       ? flags.with.split(",").map((s) => s.trim()).filter(Boolean)
-      : [];
+      : presetSpec
+        ? [...presetSpec.modules]
+        : [];
 
     const resolved = resolveModules(registry, requested);
     validateApps(registry, resolved.modules, apps);
 
-    const projectName = flags.name ?? "my-app";
+    const projectName = flags.name ?? (presetSpec ? presetSpec.id : "my-app");
     const selection = { projectName, outDir: "", apps, modules: resolved.modules };
     const targets = [...selectedTargets(buildContext(selection))];
 
@@ -87,6 +92,9 @@ export async function runPlan(flags: PlanFlags): Promise<void> {
     const env: Record<string, string> = {};
     for (const id of resolved.modules) {
       Object.assign(env, registry.require(id).manifest.env);
+    }
+    if (presetSpec && "NEXT_PUBLIC_DEFAULT_VERTICAL" in env) {
+      env.NEXT_PUBLIC_DEFAULT_VERTICAL = presetSpec.defaultVertical;
     }
 
     const plan: Plan = {

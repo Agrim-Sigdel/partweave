@@ -24,11 +24,11 @@ jobs:
         language: ["javascript-typescript", "python"]
     steps:
       - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-      - uses: github/codeql-action/autobuild@v3
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/autobuild@v4
+      - uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
 
@@ -90,7 +90,7 @@ jobs:
         working-directory: ${{ runner.temp }}/sec-app
         run: docker build -t partweave-server-sec apps/server
       - name: Scan generated server Docker image with Trivy
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: partweave-server-sec
           format: sarif

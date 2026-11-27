@@ -43,6 +43,7 @@ export function buildProgram(): Command {
     .option("--mobile", "include the Expo mobile app")
     .option("--no-mobile", "exclude the mobile app")
     .option("--with <ids>", "comma-separated component ids (e.g. auth,docker,ci)")
+    .option("--preset <id>", "vertical preset (barbershop | florist | escrow-market | saas)")
     .option("--js-pm <pm>", "JS package manager: pnpm | npm (default: auto-detect)")
     .option("--py-pm <pm>", "Python package manager: uv | pip (default: auto-detect)")
     .option("-y, --yes", "skip prompts; use flags/defaults")
@@ -104,6 +105,7 @@ export function buildProgram(): Command {
     .option("--mobile", "include the Expo mobile app")
     .option("--no-mobile", "exclude the mobile app")
     .option("--with <ids>", "comma-separated component ids (e.g. auth,docker,ci)")
+    .option("--preset <id>", "vertical preset (barbershop | florist | escrow-market | saas)")
     .option("--json", "emit the plan as a JSON envelope")
     .action(async (name: string | undefined, opts: Record<string, unknown>) => {
       await runPlan({ ...opts, name: name ?? (opts.name as string) });
