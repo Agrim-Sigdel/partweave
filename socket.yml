@@ -1,0 +1,46 @@
+# Socket.dev configuration (schema v2).
+# Keeps malware, CVE, install-script, obfuscation, and ownership checks active,
+# while suppressing noisy capability/telemetry/license alerts emitted by core
+# frameworks (Next.js, Vite, Vitest, Tailwind/LightningCSS, sharp, Expo).
+version: 2
+
+projectIgnorePaths:
+  - ".claude/**"
+  - "apps/website/.next/**"
+  - "graphify-out/**"
+  - "notes/**"
+  - "project-insight/**"
+  - "prototypes/**"
+
+issueRules:
+  # Keep high-signal supply-chain security checks enabled
+  malware: true
+  criticalCVE: true
+  highCVE: true
+  mediumCVE: true
+  installScripts: true
+  obfuscatedFile: true
+  potentialVulnerability: true
+  typosquat: true
+  trollPackage: true
+  unstableOwnership: true
+
+  # Suppress noisy telemetry / framework capability / transitive license alerts
+  envVars: false
+  filesystemAccess: false
+  networkAccess: false
+  shellAccess: false
+  usesEval: false
+  dynamicRequire: false
+  urlStrings: false
+  debugAccess: false
+  minifiedFile: false
+  trivialPackage: false
+  unmaintained: false
+  newAuthor: false
+  gptAnomaly: false
+  gptSecurity: false
+  copyleftLicense: false
+  nonpermissiveLicense: false
+  unidentifiedLicense: false
+  unresolvedRequire: false

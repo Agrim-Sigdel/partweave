@@ -80,7 +80,7 @@ jobs:
         working-directory: ${{ runner.temp }}/sec-app
         run: |
           pnpm install
-          pnpm audit --prod --audit-level=high
+          pnpm audit --audit-level=high
       - name: Install and audit generated Python dependencies
         working-directory: ${{ runner.temp }}/sec-app/apps/server
         run: |

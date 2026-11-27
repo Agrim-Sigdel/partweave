@@ -116,21 +116,23 @@ describe("buildRootPackageJson", () => {
   });
 
   it("silences known-benign deprecated transitive deps for pnpm projects", () => {
-    // Mobile drags in the Expo/RN + jsdom@20 chain; web only jsdom@25.
+    // Mobile drags in the Expo/RN + jsdom@20 chain; web (jsdom@27) has none.
     const both = JSON.parse(
       buildRootPackageJson(ctx({ apps: ["web", "mobile"], jsPm: "pnpm" }), false)!,
     );
     const allow = both.pnpm.allowedDeprecatedVersions;
     expect(allow).toMatchObject({ glob: "7", rimraf: "3", inflight: "1", uuid: "7" });
-    expect(allow["whatwg-encoding"]).toBe("2 || 3");
+    expect(allow["whatwg-encoding"]).toBe("2");
 
-    // web-only sees only whatwg-encoding@3, none of the Expo/RN packages.
+    // web-only has no deprecated transitive deps now that jsdom@27 dropped whatwg-encoding.
     const web = JSON.parse(buildRootPackageJson(ctx({ apps: ["web"], jsPm: "pnpm" }), false)!);
-    expect(web.pnpm.allowedDeprecatedVersions).toEqual({ "whatwg-encoding": "3" });
+    expect(web.pnpm.allowedDeprecatedVersions).toBeUndefined();
     expect(both.pnpm.overrides).toMatchObject({
       postcss: ">=8.5.23",
       "image-size": ">=2.0.3",
       "decode-uri-component": ">=0.5.1",
+      "glob@>=9.0.0 <=14.0.1": ">=14.0.2",
+      "minimatch@>=7.0.0 <11.0.1": ">=11.0.1",
     });
     expect(web.pnpm.overrides).toEqual({ postcss: ">=8.5.23" });
 

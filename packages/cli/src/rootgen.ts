@@ -82,9 +82,9 @@ export function buildRootPackageJson(
   pkg.scripts = scripts;
   if (anyJs) pkg.devDependencies = { typescript: "^5.7.2" };
 
-  // Expo/React Native (glob@7, rimraf@3, inflight, uuid@7) and the jsdom-based
-  // test runners (abab, domexception, whatwg-encoding) drag in deprecated
-  // *transitive* deps that pnpm loudly summarizes on install. None are ours to
+  // Expo/React Native (glob@7, rimraf@3, inflight, uuid@7) and mobile's jest
+  // (jsdom@20 → abab, domexception, whatwg-encoding@2) drag in deprecated
+  // *transitive* deps that pnpm summarizes on install. None are ours to
   // upgrade — they carry no compatible newer version and resolve only when those
   // frameworks update — so acknowledge the known-benign ones instead of alarming
   // the user. Pinned to the observed majors so a genuinely *new* deprecation
@@ -99,18 +99,16 @@ export function buildRootPackageJson(
         inflight: "1",
         rimraf: "3",
         uuid: "7",
+        "whatwg-encoding": "2",
       });
-    }
-    if (ctx.hasWeb || ctx.hasMobile) {
-      // web pulls jsdom@25 (whatwg-encoding@3); mobile's jest uses jsdom@20 (@2).
-      allowed["whatwg-encoding"] =
-        ctx.hasWeb && ctx.hasMobile ? "2 || 3" : ctx.hasWeb ? "3" : "2";
     }
     const overrides: Record<string, string> = {};
     if (ctx.hasWeb || ctx.hasMobile) overrides.postcss = ">=8.5.23";
     if (ctx.hasMobile) {
       overrides["image-size"] = ">=2.0.3";
       overrides["decode-uri-component"] = ">=0.5.1";
+      overrides["glob@>=9.0.0 <=14.0.1"] = ">=14.0.2";
+      overrides["minimatch@>=7.0.0 <11.0.1"] = ">=11.0.1";
     }
     if (Object.keys(allowed).length > 0 || Object.keys(overrides).length > 0) {
       pkg.pnpm = {
