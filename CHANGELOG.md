@@ -8,6 +8,8 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-27
+
 ### Security
 - **CLI generator hardening:** Validated `PARTWEAVE_REGISTRY_REF` and switched `fetcher.ts` to `execFileSync` (preventing command injection and `..` cache deletion), enforced directory containment in `partweave extract --from`, rejected control characters/quotes/backslashes in `projectName` (`render.ts` / `compose.ts`), switched `serve.ts` and `hasCommand` away from interpolated shell strings, skipped symlinks in `listFiles`, and hardened `buildServerDockerfile` with a non-root `appuser` and pinned `uv` image tag.
 - **Classification API (`packages/api`) hardening:** Defaulted `DEBUG` and `CORS_ALLOW_ALL_ORIGINS` to `False`, restricted `ALLOWED_HOSTS` to localhost, replaced the hardcoded production `SECRET_KEY` fallback with an ephemeral per-process key, enforced JSON `Content-Type`, origin checks, and payload size limits on `/api/classify`, validated module IDs and cached temporal indexing in `indexer.py`, and replaced `innerHTML` in `mock_ui.html` with `textContent`.
@@ -185,7 +187,8 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 - Initial published release (under the former `quick-build` name).
 
-[Unreleased]: https://github.com/Agrim-Sigdel/partweave/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/Agrim-Sigdel/partweave/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/Agrim-Sigdel/partweave/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Agrim-Sigdel/partweave/compare/v0.5.0...v0.6.0
 [0.3.3]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/Agrim-Sigdel/partweave/compare/v0.3.1...v0.3.2

@@ -54,3 +54,4 @@ cd /tmp/my-saas && partweave add subscriptions metering
 ```
 
 All Python cores work standalone with zero Postgres/Redis dependency by default, and expose clean callback hooks (`load_*`, `save_*`, `atomic_ctx`) so you can wire Django ORM models, `transaction.atomic()`, or Redis into the wrapper without rewriting the verified rules.
+
