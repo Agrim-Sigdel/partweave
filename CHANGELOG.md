@@ -8,6 +8,8 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-11-28
+
 ### Fixed
 - **Generated Docker image security scan:** Upgrade Debian packages in both generated server Dockerfile variants and pin the copied `uv` binary to 0.13.10, which includes the latest upstream security fix.
 - **Generated CI action runtime warning:** Upgrade generated workflows to checkout/setup-node v5, setup-python v6, pnpm/action-setup v5, and setup-uv v7 so they run on Node 24 without the Node 20 deprecation warning.
@@ -203,7 +205,8 @@ to the [`partweave`](https://www.npmjs.com/package/partweave) npm package.
 
 - Initial published release (under the former `quick-build` name).
 
-[Unreleased]: https://github.com/Agrim-Sigdel/partweave/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/Agrim-Sigdel/partweave/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/Agrim-Sigdel/partweave/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/Agrim-Sigdel/partweave/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/Agrim-Sigdel/partweave/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Agrim-Sigdel/partweave/compare/v0.5.0...v0.6.0
