@@ -19,7 +19,7 @@ jobs:
     outputs:
       matrix: ${{ steps.catalog.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v5
         with:
@@ -55,7 +55,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v5
         with:
@@ -76,7 +76,7 @@ jobs:
     name: docker build (server image)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v5
         with:
